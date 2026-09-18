@@ -45,9 +45,14 @@ const defaultCollector: Collector = async (token, sources, signal) => {
       typeof item === "object" && item !== null && "inputUrl" in item
         ? String((item as { inputUrl?: unknown }).inputUrl ?? "")
         : "";
-    const source =
-      sources.find((candidate) => candidate.facebook_url === inputUrl) ??
-      sources[0];
+    const raw = typeof item === "object" && item !== null ? item as Record<string, unknown> : {};
+    const topLevelUrl = typeof raw.topLevelUrl === "string" ? raw.topLevelUrl : "";
+    const source = sources.find((candidate) => {
+      const expected = candidate.facebook_url.replace(/\/$/, "");
+      return [inputUrl, topLevelUrl]
+        .map((value) => value.replace(/\/$/, ""))
+        .some((value) => value === expected || value.startsWith(expected + "/"));
+    });
 
     return normalizeApifyFacebookItem(item, {
       sourceId: source?.id ?? "unknown",
