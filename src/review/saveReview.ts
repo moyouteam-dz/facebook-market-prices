@@ -20,6 +20,7 @@ export interface EditableReviewCandidate {
   raw_text: string;
   image_url?: string;
   confidence: "high" | "medium" | "low";
+  ai_assisted?: boolean;
   accepted: boolean;
   remember_correction: boolean;
 }

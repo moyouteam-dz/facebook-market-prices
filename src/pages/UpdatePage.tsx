@@ -6,7 +6,9 @@ import {
 } from "../apify/apifyAdapter";
 import { db as defaultDb, type AppDatabase } from "../db/database";
 import { normalizeCollectedFacebookItems } from "../apify/normalizeCollectedItems";
-import { getApifyToken } from "../db/secrets";
+import { getApifyToken, getGeminiApiKey } from "../db/secrets";
+import { getGeminiFallbackEnabled } from "../gemini/settings";
+import { extractPricesWithGemini } from "../gemini/extraction";
 import { createArabicPaddleOcrEngine } from "../ocr/paddleOcrEngine";
 import type { OcrEngine } from "../ocr/types";
 import {
@@ -121,6 +123,8 @@ export default function UpdatePage({
       return;
     }
 
+    const geminiEnabled = await getGeminiFallbackEnabled(database);
+    const geminiKey = geminiEnabled ? await getGeminiApiKey(database) : null;
     const abortController = new AbortController();
     const ocrEngine = createOcrEngine();
     setController(abortController);
@@ -135,6 +139,7 @@ export default function UpdatePage({
         ocrEngine,
         signal: abortController.signal,
         onProgress: setProgress,
+        gemini: { enabled: geminiEnabled, apiKey: geminiKey, extract: (key, evidence) => extractPricesWithGemini(key, evidence) },
       });
 
       const candidates = result.candidates.map((candidate) => ({
@@ -143,6 +148,12 @@ export default function UpdatePage({
         accepted: true,
         remember_correction: false,
       }));
+      if (candidates.length === 0) {
+        const d = result.diagnostics;
+        setMessage(`لم يتم العثور على أسعار. تم فحص ${d.posts} منشورًا و${d.images_processed} صورة. أخطاء الصور: ${d.image_failures}. محاولات Gemini: ${d.gemini_attempted}، الفاشلة: ${d.gemini_failed}.`);
+        setProgress(null);
+        return;
+      }
       const session = { runId: result.runId, candidates };
       (setReviewSession ?? review.setSession)(session);
       setMessage(`تم العثور على ${candidates.length} نتيجة. سيتم فتح المراجعة.`);

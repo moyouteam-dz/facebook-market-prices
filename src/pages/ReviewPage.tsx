@@ -88,6 +88,7 @@ export default function ReviewPage() {
               <span className={"confidence " + candidate.confidence}>
                 {confidenceLabel[candidate.confidence]}
               </span>
+              {candidate.ai_assisted && <span className="status-badge">مساعدة Gemini</span>}
             </div>
 
             {!candidate.accepted && (

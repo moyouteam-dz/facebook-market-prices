@@ -16,9 +16,14 @@ import {
 import { db, type SourceRecord } from "../db/database";
 import {
   deleteApifyToken,
+  deleteGeminiApiKey,
   getApifyToken,
+  getGeminiApiKey,
   replaceApifyToken,
+  replaceGeminiApiKey,
 } from "../db/secrets";
+import { testGeminiApiKey } from "../gemini/tokenValidation";
+import { getGeminiFallbackEnabled, setGeminiFallbackEnabled } from "../gemini/settings";
 import { buildCsvExport } from "../history/historyExport";
 import {
   createSource,
@@ -68,6 +73,11 @@ export default function SettingsPage() {
   const [tokenMessage, setTokenMessage] = useState("");
   const [testingToken, setTestingToken] = useState(false);
 
+  const [geminiInput, setGeminiInput] = useState("");
+  const [hasGeminiKey, setHasGeminiKey] = useState(false);
+  const [geminiEnabled, setGeminiEnabledState] = useState(false);
+  const [geminiMessage, setGeminiMessage] = useState("");
+  const [testingGemini, setTestingGemini] = useState(false);
   const [dataMessage, setDataMessage] = useState("");
 
   async function reloadSources() {
@@ -81,6 +91,8 @@ export default function SettingsPage() {
   useEffect(() => {
     void reloadSources();
     void reloadTokenState();
+    void getGeminiApiKey(db).then((key) => setHasGeminiKey(Boolean(key)));
+    void getGeminiFallbackEnabled(db).then(setGeminiEnabledState);
   }, []);
 
   function resetSourceForm() {
@@ -179,6 +191,27 @@ export default function SettingsPage() {
     setTokenInput("");
     setHasToken(false);
     setTokenMessage("تم حذف المفتاح.");
+  }
+
+  async function handleGeminiSave(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const key = geminiInput.trim();
+    if (!key) { setGeminiMessage("أدخل مفتاح Gemini أولًا."); return; }
+    setTestingGemini(true); setGeminiMessage("جارٍ اختبار المفتاح…");
+    try {
+      if (!(await testGeminiApiKey(key))) { setGeminiMessage("تعذر التحقق من المفتاح. لم يتم حفظه."); return; }
+      await replaceGeminiApiKey(db, key); setGeminiInput(""); setHasGeminiKey(true);
+      setGeminiMessage("تم التحقق من مفتاح Gemini وحفظه محليًا.");
+    } finally { setTestingGemini(false); }
+  }
+
+  async function handleGeminiDelete() {
+    if (!window.confirm("حذف مفتاح Gemini المحفوظ من هذا الجهاز؟")) return;
+    await deleteGeminiApiKey(db); setHasGeminiKey(false); setGeminiInput(""); setGeminiMessage("تم حذف المفتاح.");
+  }
+
+  async function handleGeminiToggle(enabled: boolean) {
+    await setGeminiFallbackEnabled(db, enabled); setGeminiEnabledState(enabled);
   }
 
   async function handleBackup() {
@@ -294,6 +327,17 @@ export default function SettingsPage() {
           </button>
         )}
         {tokenMessage && <p className="form-message">{tokenMessage}</p>}
+      </div>
+
+      <div className="panel stack">
+        <div><h2>Gemini AI</h2><p className="muted">{hasGeminiKey ? "يوجد مفتاح Gemini محفوظ محليًا. لا نعرض قيمته مرة أخرى." : "اختياري: يُستخدم فقط عندما يفشل التحليل التقليدي أو تكون نتائجه منخفضة الثقة."}</p></div>
+        <form className="stack source-form" onSubmit={handleGeminiSave}>
+          <label><span>{hasGeminiKey ? "استبدال مفتاح Gemini" : "مفتاح Gemini"}</span><input dir="ltr" type="password" autoComplete="off" value={geminiInput} onChange={(event)=>setGeminiInput(event.target.value)} /></label>
+          <button className="primary-action button-reset" type="submit" disabled={testingGemini}>{testingGemini ? "جارٍ الاختبار…" : "اختبار وحفظ مفتاح Gemini"}</button>
+        </form>
+        {hasGeminiKey && <button className="danger-action" type="button" onClick={()=>void handleGeminiDelete()}>حذف مفتاح Gemini</button>}
+        <label className="check-row"><input type="checkbox" checked={geminiEnabled} onChange={(event)=>void handleGeminiToggle(event.target.checked)} /><span>استخدام Gemini عند فشل التحليل</span></label>
+        {geminiMessage && <p className="form-message">{geminiMessage}</p>}
       </div>
 
       <div className="panel stack">
@@ -419,7 +463,7 @@ export default function SettingsPage() {
         <div>
           <h2>البيانات والنسخ الاحتياطي</h2>
           <p className="muted">
-            النسخة الاحتياطية تشمل التاريخ والمصادر والتصحيحات، ولا تشمل مفتاح Apify.
+            النسخة الاحتياطية تشمل التاريخ والمصادر والتصحيحات، ولا تشمل مفاتيح Apify أو Gemini.
           </p>
         </div>
 
@@ -453,7 +497,7 @@ export default function SettingsPage() {
         <div className="danger-zone">
           <strong>منطقة الحذف</strong>
           <p className="muted">
-            هذا يحذف كل بيانات التطبيق المحلية من الجهاز، بما فيها مفتاح Apify.
+            هذا يحذف كل بيانات التطبيق المحلية من الجهاز، بما فيها مفاتيح Apify وGemini.
           </p>
           <button
             className="danger-action"

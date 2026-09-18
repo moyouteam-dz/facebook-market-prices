@@ -90,6 +90,9 @@ export function parsePriceCandidates(input: string): PriceCandidate[] {
     const rawLine = lines[index] ?? "";
     let match = rawLine.match(PRICE_PATTERN);
     let rawProduct = match?.[1] ?? "";
+    // A price-only line also matches PRICE_PATTERN with an empty product.
+    // Treat that as unresolved so OCR layouts split across adjacent lines can use the previous line.
+    if (match && !cleanProduct(rawProduct)) match = null;
     let confidence: Confidence | undefined;
 
     if (!match) {
