@@ -71,6 +71,10 @@ function confidenceFor(rawProduct: string, product: string): Confidence {
 
 const PRICE_PATTERN =
   /^(.*?)\s*[:：]?\s*(\d+(?:[.,]\d+)?)\s*(?:-\s*(\d+(?:[.,]\d+)?))?\s*(?:دج|د\.?\s*j|دينار(?:\s+جزائري)?)(?:\s|$)/iu;
+const PRICE_WITHOUT_CURRENCY_PATTERN =
+  /^(.*?)\s*[:：]?\s*(\d+(?:[.,]\d+)?)\s*(?:-\s*(\d+(?:[.,]\d+)?))?\s*$/u;
+const PRICE_ONLY_PATTERN =
+  /^(\d+(?:[.,]\d+)?)\s*(?:-\s*(\d+(?:[.,]\d+)?))?\s*(?:دج|د\.?\s*j|دينار(?:\s+جزائري)?)(?:\s|$)/iu;
 
 function parseNumber(value: string): number {
   return Number(value.replace(",", "."));
@@ -80,29 +84,36 @@ export function parsePriceCandidates(input: string): PriceCandidate[] {
   const normalized = normalizeArabicPriceText(input);
   const candidates: PriceCandidate[] = [];
 
-  for (const rawLine of normalized.split(/\r?\n/)) {
-    const line = rawLine.trim();
-    if (!line) {
-      continue;
-    }
+  const lines = normalized.split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
 
-    const match = line.match(PRICE_PATTERN);
+  for (let index = 0; index < lines.length; index += 1) {
+    const rawLine = lines[index] ?? "";
+    let match = rawLine.match(PRICE_PATTERN);
+    let rawProduct = match?.[1] ?? "";
+    let confidence: Confidence | undefined;
+
     if (!match) {
-      continue;
+      const priceOnly = rawLine.match(PRICE_ONLY_PATTERN);
+      const previousLine = index > 0 ? lines[index - 1] ?? "" : "";
+      if (priceOnly && previousLine && !/\d/.test(previousLine)) {
+        rawProduct = previousLine;
+        match = [rawLine, rawProduct, priceOnly[1], priceOnly[2]] as RegExpMatchArray;
+      }
     }
 
-    const rawProduct = match[1] ?? "";
-    const product = cleanProduct(rawProduct);
-    if (!product) {
-      continue;
+    if (!match) {
+      match = rawLine.match(PRICE_WITHOUT_CURRENCY_PATTERN);
+      if (match) confidence = "medium";
     }
+
+    if (!match) continue;
+
+    const product = cleanProduct(rawProduct || match[1] || "");
+    if (!product) continue;
 
     const min = parseNumber(match[2]);
     const max = match[3] ? parseNumber(match[3]) : min;
-
-    if (!Number.isFinite(min) || !Number.isFinite(max)) {
-      continue;
-    }
+    if (!Number.isFinite(min) || !Number.isFinite(max)) continue;
 
     candidates.push({
       product,
@@ -110,7 +121,7 @@ export function parsePriceCandidates(input: string): PriceCandidate[] {
       price_min: Math.min(min, max),
       price_max: Math.max(min, max),
       currency: "DZD",
-      confidence: confidenceFor(rawProduct, product),
+      confidence: confidence ?? confidenceFor(rawProduct || match[1] || "", product),
       raw_text: rawLine,
     });
   }
