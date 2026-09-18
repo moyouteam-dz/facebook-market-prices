@@ -1,3 +1,4 @@
+import { classifyOcrError } from "../ocr/ocrError";
 import { shouldUseGemini } from "../gemini/fallbackPolicy";
 import type { GeminiPriceCandidate } from "../gemini/extraction";
 import { applyProductAlias } from "../aliases/productAliases";
@@ -284,7 +285,7 @@ export async function runManualRefresh(
         ? "image_fetch_network"
         : reason === "image_download_failed"
           ? "image_http_failed"
-          : "image_ocr_failed";
+          : classifyOcrError(error);
       increment(imageFailureCategories, category);
       errors.push(category);
     }
