@@ -2,6 +2,7 @@ import { safeExternalHttpUrl } from "../security/externalUrl";
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { useReviewSession } from "../review/ReviewSessionContext";
+import { validateReviewCandidate } from "../review/validation";
 
 const confidenceLabel = {
   high: "ثقة عالية",
@@ -29,6 +30,23 @@ export default function ReviewPage() {
   }
 
   async function handleSave() {
+    const invalid = session.candidates.find(
+      (candidate) => candidate.accepted && !validateReviewCandidate(candidate).valid,
+    );
+    if (invalid) {
+      const validation = validateReviewCandidate(invalid);
+      setSummary(
+        validation.valid
+          ? ""
+          : validation.reason === "product_required"
+            ? "اسم المنتج مطلوب قبل الحفظ."
+            : validation.reason === "invalid_range"
+              ? "يجب أن يكون أدنى سعر أقل من أو يساوي أعلى سعر."
+              : "تحقق من قيم الأسعار قبل الحفظ.",
+      );
+      return;
+    }
+
     setSaving(true);
     setSummary("");
     try {
