@@ -1,3 +1,4 @@
+import { parseOcrPriceCandidates } from "../parser/ocrPriceParser";
 import { classifyOcrError } from "../ocr/ocrError";
 import { shouldUseGemini } from "../gemini/fallbackPolicy";
 import type { GeminiPriceCandidate } from "../gemini/extraction";
@@ -261,7 +262,7 @@ export async function runManualRefresh(
       const ocr = await options.ocrEngine.recognize(blob);
       imagesProcessed += 1;
       ocrTextByPost.set(job.post.post_id, [...(ocrTextByPost.get(job.post.post_id) ?? []), ocr.text].filter(Boolean));
-      const ocrParsed = parsePriceCandidates(ocr.text);
+      const ocrParsed = parseOcrPriceCandidates(ocr.text);
       deterministicByPost.set(job.post.post_id, [...(deterministicByPost.get(job.post.post_id) ?? []), ...ocrParsed]);
 
       for (const parsed of ocrParsed) {
