@@ -141,12 +141,14 @@ export function parseBackupJson(json: string): BackupDocument {
 export async function resetAllLocalData(db: AppDatabase): Promise<void> {
   await db.transaction(
     "rw",
-    db.secret_settings,
-    db.settings,
-    db.sources,
-    db.price_history,
-    db.product_aliases,
-    db.runs,
+    [
+      db.secret_settings,
+      db.settings,
+      db.sources,
+      db.price_history,
+      db.product_aliases,
+      db.runs,
+    ],
     async () => {
       await Promise.all([
         db.secret_settings.clear(),
