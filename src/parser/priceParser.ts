@@ -37,18 +37,18 @@ export function normalizeArabicPriceText(input: string): string {
   return input
     .replace(/[٠-٩۰-۹]/g, (digit) => ARABIC_INDIC_DIGITS[digit] ?? digit)
     .replace(/[–—_]/g, "-")
-    .replace(/[   ]/g, " ")
-    .replace(/[ 	]+/g, " ")
+    .replace(/[\u00a0\u2007\u202f]/g, " ")
+    .replace(/[ \t]+/g, " ")
     .replace(/ *- */g, "-")
-    .replace(/ *دs*ج/g, " دج")
+    .replace(/ *د\s*ج/g, " دج")
     .trim();
 }
 
 function cleanProduct(raw: string): string {
   return raw
-    .replace(/^[^p{L}p{N}]+/gu, "")
-    .replace(/[^p{L}p{N}]+$/gu, "")
-    .replace(/s+/g, " ")
+    .replace(/^[^\p{L}\p{N}]+/gu, "")
+    .replace(/[^\p{L}\p{N}]+$/gu, "")
+    .replace(/\s+/g, " ")
     .trim();
 }
 
@@ -57,7 +57,7 @@ function confidenceFor(rawProduct: string, product: string): Confidence {
     return "low";
   }
 
-  const obviousNoise = (rawProduct.match(/[?*#@!]{1,}/g) ?? []).join("").length;
+  const obviousNoise = (rawProduct.match(/[?*#@!]+/g) ?? []).join("").length;
   if (obviousNoise > 0) {
     return "medium";
   }
@@ -70,7 +70,7 @@ function confidenceFor(rawProduct: string, product: string): Confidence {
 }
 
 const PRICE_PATTERN =
-  /^(.*?)s*[:：]?s*(d+(?:[.,]d+)?)s*(?:-s*(d+(?:[.,]d+)?))?s*(?:دج|د.?s*j|دينار(?:s+جزائري)?)/iu;
+  /^(.*?)\s*[:：]?\s*(\d+(?:[.,]\d+)?)\s*(?:-\s*(\d+(?:[.,]\d+)?))?\s*(?:دج|د\.?\s*j|دينار(?:\s+جزائري)?)(?:\s|$)/iu;
 
 function parseNumber(value: string): number {
   return Number(value.replace(",", "."));
@@ -80,8 +80,7 @@ export function parsePriceCandidates(input: string): PriceCandidate[] {
   const normalized = normalizeArabicPriceText(input);
   const candidates: PriceCandidate[] = [];
 
-  for (const rawLine of normalized.split(/?
-/)) {
+  for (const rawLine of normalized.split(/\r?\n/)) {
     const line = rawLine.trim();
     if (!line) {
       continue;
