@@ -1,3 +1,4 @@
+import { safeExternalHttpUrl } from "../security/externalUrl";
 import { type FormEvent, useEffect, useState } from "react";
 import { db, type PriceHistoryRecord } from "../db/database";
 import {
@@ -120,14 +121,14 @@ export default function HistoryPage() {
                 <span>
                   {new Date(record.post_date).toLocaleDateString("ar-DZ")}
                 </span>
-                <a
+                {safeExternalHttpUrl(record.post_url) ? (<a
                   className="source-link"
-                  href={record.post_url}
+                  href={safeExternalHttpUrl(record.post_url) ?? undefined}
                   target="_blank"
                   rel="noreferrer"
                 >
                   المصدر
-                </a>
+                </a>) : <span className="muted">لا يوجد رابط آمن</span>}
               </div>
             </article>
           ))}
