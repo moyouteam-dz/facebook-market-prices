@@ -1,0 +1,39 @@
+[
+  {
+    "inputUrl": "https://www.facebook.com/MagrosOuarsenisBourached",
+    "pageName": "Magros Ouarsenis",
+    "postId": "123456789",
+    "text": "البصل 35-40 دج",
+    "timestamp": "2026-09-17T12:00:00.000Z",
+    "url": "https://www.facebook.com/MagrosOuarsenisBourached/posts/123456789",
+    "media": [
+      {
+        "type": "video",
+        "thumbnail": "https://example.test/video-thumb.jpg"
+      },
+      {
+        "image": {
+          "uri": "https://example.test/price-board.jpg"
+        },
+        "ocrText": "May be an image of text"
+      },
+      {
+        "photo_image": {
+          "uri": "https://example.test/second-photo.jpg"
+        }
+      },
+      {
+        "image": {}
+      }
+    ]
+  },
+  {
+    "inputUrl": "https://www.facebook.com/profile.php?id=100057039356298",
+    "pageName": "E.P.E Magros SPA",
+    "postId": "unavailable-1",
+    "text": "This content isn't available right now",
+    "timestamp": "2026-09-17T13:00:00.000Z",
+    "url": "https://www.facebook.com/100057039356298/posts/unavailable-1",
+    "media": []
+  }
+]
