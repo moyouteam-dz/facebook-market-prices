@@ -72,7 +72,7 @@ export async function extractPricesWithGemini(
       }),
     },
   );
-  if (!response.ok) throw new Error("gemini_request_failed");
+  if (!response.ok) throw new Error("gemini_http_" + response.status);
   const payload = await response.json() as { candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }> };
   const text = payload.candidates?.[0]?.content?.parts?.[0]?.text;
   if (!text) return [];
