@@ -170,7 +170,15 @@ export async function runManualRefresh(
     throw error;
   }
 
-  throwIfAborted(options.signal);
+  try {
+    throwIfAborted(options.signal);
+  } catch (error) {
+    await options.db.runs.update(runId, {
+      finished_at: new Date().toISOString(),
+      errors: ["refresh_cancelled"],
+    });
+    throw error;
+  }
   options.onProgress?.({ stage: "parsing", completed: 0, total: posts.length });
 
   for (let postIndex = 0; postIndex < posts.length; postIndex += 1) {
@@ -215,7 +223,18 @@ export async function runManualRefresh(
   });
 
   for (const job of imageJobs) {
-    throwIfAborted(options.signal);
+    try {
+      throwIfAborted(options.signal);
+    } catch (error) {
+      await options.db.runs.update(runId, {
+        finished_at: new Date().toISOString(),
+        posts_received: posts.length,
+        images_processed: imagesProcessed,
+        candidates_found: deduplicateReviewCandidates(candidates).length,
+        errors: [...errors, "refresh_cancelled"],
+      });
+      throw error;
+    }
 
     try {
       const blob = await options.fetchImage(job.imageUrl, options.signal);
