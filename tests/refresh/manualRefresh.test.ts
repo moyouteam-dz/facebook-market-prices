@@ -164,4 +164,22 @@ describe("manual refresh orchestration", () => {
     });
     expect(extract).not.toHaveBeenCalled();
   });
+  it("stops Gemini attempts for the rest of a refresh after a 429 quota response", async () => {
+    const extract = vi.fn().mockRejectedValue(new Error("gemini_http_429"));
+    const posts = ["g-1", "g-2", "g-3"].map((post_id) => ({
+      post_id, source_id:"source-1", source_page:"سوق الجملة", market:"الشلف",
+      post_url:"https://facebook.com/" + post_id, post_date:"2026-09-18T00:00:00.000Z",
+      text:"لا يوجد سعر", image_urls:[], unavailable:false,
+    }));
+    const result = await runManualRefresh({
+      db, token:"token", sources:[source],
+      collectPosts: vi.fn().mockResolvedValue(posts),
+      fetchImage: vi.fn(), ocrEngine:{recognize:vi.fn()},
+      gemini:{enabled:true,apiKey:"secret",extract},
+    });
+    expect(extract).toHaveBeenCalledTimes(1);
+    expect(result.diagnostics.gemini_attempted).toBe(1);
+    expect(result.diagnostics.gemini_failed).toBe(1);
+    expect(result.diagnostics.gemini_failure_categories).toEqual({ gemini_http_429: 1 });
+  });
 });
