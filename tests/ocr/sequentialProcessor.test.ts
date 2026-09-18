@@ -18,13 +18,20 @@ describe("mobile OCR abstraction", () => {
   it("processes images strictly one at a time and reports progress", async () => {
     let active = 0;
     let maxActive = 0;
+    const first = new Blob(["first"], { type: "text/plain" });
+    const second = new Blob(["second"], { type: "text/plain" });
+    const labels = new Map<Blob, string>([
+      [first, "first"],
+      [second, "second"],
+    ]);
+
     const recognize = vi.fn(async (image: Blob) => {
       active += 1;
       maxActive = Math.max(maxActive, active);
       await Promise.resolve();
       active -= 1;
       return {
-        text: await image.text(),
+        text: labels.get(image) ?? "",
         confidence: 0.9,
       };
     });
@@ -32,16 +39,9 @@ describe("mobile OCR abstraction", () => {
     const engine: OcrEngine = { recognize };
     const progress: Array<[number, number]> = [];
 
-    const results = await processImagesSequentially(
-      [
-        new Blob(["first"], { type: "text/plain" }),
-        new Blob(["second"], { type: "text/plain" }),
-      ],
-      engine,
-      {
-        onProgress: (done, total) => progress.push([done, total]),
-      },
-    );
+    const results = await processImagesSequentially([first, second], engine, {
+      onProgress: (done, total) => progress.push([done, total]),
+    });
 
     expect(maxActive).toBe(1);
     expect(results.map((result) => result.text)).toEqual(["first", "second"]);
