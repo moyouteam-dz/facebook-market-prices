@@ -150,7 +150,9 @@ export default function UpdatePage({
       }));
       if (candidates.length === 0) {
         const d = result.diagnostics;
-        setMessage(`لم يتم العثور على أسعار. تم فحص ${d.posts} منشورًا و${d.images_processed} صورة. أخطاء الصور: ${d.image_failures}. محاولات Gemini: ${d.gemini_attempted}، الفاشلة: ${d.gemini_failed}.`);
+        const imageKinds = Object.entries(d.image_failure_categories).map(([kind,count]) => `${kind}: ${count}`).join("، ");
+        const geminiKinds = Object.entries(d.gemini_failure_categories).map(([kind,count]) => `${kind}: ${count}`).join("، ");
+        setMessage(`لم يتم العثور على أسعار. تم فحص ${d.posts} منشورًا و${d.images_processed} صورة. أخطاء الصور: ${d.image_failures}${imageKinds ? ` (${imageKinds})` : ""}. محاولات Gemini: ${d.gemini_attempted}، الفاشلة: ${d.gemini_failed}${geminiKinds ? ` (${geminiKinds})` : ""}.`);
         setProgress(null);
         return;
       }
