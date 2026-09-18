@@ -9,18 +9,11 @@ on:
 
 permissions:
   contents: read
-  issues: write
 
 jobs:
   test:
     runs-on: ubuntu-latest
     steps:
-      - name: Runner probe
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          echo "runner-started"
-          gh issue comment 1 --body "Runner probe reached for ${GITHUB_SHA}."
       - name: Checkout
         uses: actions/checkout@v4
       - name: Setup Node
@@ -28,23 +21,7 @@ jobs:
         with:
           node-version: "22"
       - name: Install
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          set +e
-          npm install --no-audit --no-fund 2>&1 | tee install.log
-          status=${PIPESTATUS[0]}
-          if [ "$status" -ne 0 ]; then
-            {
-              echo '### npm install failure'
-              echo
-              echo '```text'
-              tail -n 100 install.log
-              echo '```'
-            } > issue.md
-            gh issue comment 1 --body-file issue.md
-            exit "$status"
-          fi
+        run: npm install --no-audit --no-fund
       - name: Unit tests
         run: npm run test:run
       - name: Typecheck
