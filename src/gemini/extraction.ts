@@ -1,3 +1,4 @@
+import { selectGeminiGenerateContentModel } from "./modelSelection";
 export interface GeminiEvidence {
   postText: string;
   ocrText: string;
@@ -15,7 +16,6 @@ export interface GeminiPriceCandidate {
 }
 
 type FetchLike = typeof fetch;
-const MODEL = "gemini-2.5-flash";
 
 function validateItem(value: unknown, rawText: string): GeminiPriceCandidate | null {
   if (!value || typeof value !== "object") return null;
@@ -45,8 +45,9 @@ export async function extractPricesWithGemini(
   const rawText = [evidence.postText.trim(), evidence.ocrText.trim()].filter(Boolean).join("\n");
   if (!rawText) return [];
 
+  const model = await selectGeminiGenerateContentModel(key, fetchImpl);
   const response = await fetchImpl(
-    "https://generativelanguage.googleapis.com/v1beta/models/" + MODEL + ":generateContent",
+    "https://generativelanguage.googleapis.com/v1beta/models/" + model + ":generateContent",
     {
       method: "POST",
       signal: evidence.signal,
