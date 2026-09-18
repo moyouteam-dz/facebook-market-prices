@@ -46,4 +46,20 @@ describe("Arabic PaddleOCR engine", () => {
     expect(create).toHaveBeenCalledTimes(1);
     expect(predict).toHaveBeenCalledTimes(2);
   });
+  it("wraps initialization and prediction failures with safe stage codes", async () => {
+    const initEngine=createArabicPaddleOcrEngine(async()=>({PaddleOCR:{create:vi.fn().mockRejectedValue(new Error("private init detail"))}}));
+    await expect(initEngine.recognize(new Blob(["x"]))).rejects.toThrow("ocr_init_failed");
+
+    const predict=vi.fn().mockRejectedValue(new Error("private predict detail"));
+    const predictEngine=createArabicPaddleOcrEngine(async()=>({PaddleOCR:{create:vi.fn().mockResolvedValue({predict,dispose:vi.fn()})}}));
+    await expect(predictEngine.recognize(new Blob(["x"]))).rejects.toThrow("ocr_predict_failed");
+  });
+
+  it("does not permanently cache a rejected initialization", async () => {
+    const create=vi.fn().mockRejectedValueOnce(new Error("first")).mockResolvedValueOnce({predict:vi.fn().mockResolvedValue([{items:[]}]),dispose:vi.fn()});
+    const engine=createArabicPaddleOcrEngine(async()=>({PaddleOCR:{create}}));
+    await expect(engine.recognize(new Blob(["x"]))).rejects.toThrow("ocr_init_failed");
+    await expect(engine.recognize(new Blob(["y"]))).resolves.toEqual({text:"",confidence:0});
+    expect(create).toHaveBeenCalledTimes(2);
+  });
 });
