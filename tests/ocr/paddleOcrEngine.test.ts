@@ -24,6 +24,7 @@ describe("Arabic PaddleOCR engine", () => {
         worker: true,
         ortOptions: expect.objectContaining({
           backend: "wasm",
+          wasmPaths: "https://cdn.jsdelivr.net/npm/onnxruntime-web/dist/",
           numThreads: 1,
           simd: true,
         }),
