@@ -139,5 +139,29 @@ describe("manual refresh orchestration", () => {
     expect(result.candidates).toHaveLength(1);
     expect(result.candidates[0]?.product).toBe("القرع");
     expect(result.errors).toHaveLength(1);
+    expect(result.errors[0]).not.toContain("https://");
+  });
+
+  it("uses Gemini only when deterministic extraction has no reliable candidate", async () => {
+    const extract = vi.fn().mockResolvedValue([{ product: "بطاطا", normalized_product: "بطاطا", price_min: 80, price_max: 100, currency: "DZD", confidence: "medium", raw_text: "بطاطا 80 100" }]);
+    const result = await runManualRefresh({
+      db, token: "token", sources: [source],
+      collectPosts: vi.fn().mockResolvedValue([{ post_id:"ai-1",source_id:"source-1",source_page:"سوق الجملة",market:"الشلف",post_url:"https://facebook.com/p",post_date:"2026-09-18T00:00:00.000Z",text:"بطاطا",image_urls:[],unavailable:false }]),
+      fetchImage: vi.fn(), ocrEngine: { recognize: vi.fn() },
+      gemini: { enabled: true, apiKey: "secret", extract },
+    });
+    expect(extract).toHaveBeenCalledTimes(1);
+    expect(result.candidates[0]).toEqual(expect.objectContaining({ product:"بطاطا", ai_assisted:true }));
+    expect(await db.price_history.count()).toBe(0);
+  });
+
+  it("does not call Gemini when deterministic extraction is medium or high confidence", async () => {
+    const extract = vi.fn();
+    await runManualRefresh({
+      db, token:"token", sources:[source],
+      collectPosts: vi.fn().mockResolvedValue([{ post_id:"d-1",source_id:"source-1",source_page:"سوق الجملة",market:"الشلف",post_url:"https://facebook.com/p",post_date:"2026-09-18T00:00:00.000Z",text:"بطاطا 80 دج",image_urls:[],unavailable:false }]),
+      fetchImage: vi.fn(), ocrEngine:{recognize:vi.fn()}, gemini:{enabled:true,apiKey:"secret",extract},
+    });
+    expect(extract).not.toHaveBeenCalled();
   });
 });
