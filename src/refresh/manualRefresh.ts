@@ -278,7 +278,7 @@ export async function runManualRefresh(
 
       const reason =
         error instanceof Error ? error.message : "image_ocr_failed";
-      errors.push(job.imageUrl + ": " + reason);
+      errors.push(reason === "image_download_failed" ? "image_download_failed" : "image_ocr_failed");
     }
 
     options.onProgress?.({
