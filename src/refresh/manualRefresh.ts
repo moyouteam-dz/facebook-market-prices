@@ -158,6 +158,7 @@ export async function runManualRefresh(
   let imagesProcessed = 0;
   let geminiAttempted = 0;
   let geminiFailed = 0;
+  let geminiQuotaLimited = false;
   const imageFailureCategories: Record<string, number> = {};
   const geminiFailureCategories: Record<string, number> = {};
   const increment = (map: Record<string, number>, key: string) => { map[key] = (map[key] ?? 0) + 1; };
@@ -300,7 +301,7 @@ export async function runManualRefresh(
 
   if (options.gemini?.enabled && options.gemini.apiKey) {
     for (const post of posts) {
-      if (post.unavailable) continue;
+      if (post.unavailable || geminiQuotaLimited) continue;
       const deterministic = deterministicByPost.get(post.post_id) ?? [];
       if (!shouldUseGemini(deterministic, true, true)) continue;
       geminiAttempted += 1;
@@ -318,6 +319,7 @@ export async function runManualRefresh(
         const category = /^gemini_http_\d{3}$/.test(reason) ? reason : reason === "gemini_request_failed" ? "gemini_request_failed" : "gemini_failed";
         increment(geminiFailureCategories, category);
         errors.push(category);
+        if (category === "gemini_http_429") geminiQuotaLimited = true;
       }
     }
   }
