@@ -25,6 +25,7 @@ interface PaddleModule {
       textRecognitionBatchSize: number;
       ortOptions: {
         backend: "wasm";
+        wasmPaths: string;
         numThreads: number;
         simd: boolean;
       };
@@ -73,6 +74,7 @@ export function createArabicPaddleOcrEngine(
         textRecognitionBatchSize: 1,
         ortOptions: {
           backend: "wasm",
+          wasmPaths: "https://cdn.jsdelivr.net/npm/onnxruntime-web/dist/",
           numThreads: 1,
           simd: true,
         },
