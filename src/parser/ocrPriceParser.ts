@@ -14,10 +14,12 @@ function cleanProduct(value: string): string {
     .trim();
 }
 
+const DOCUMENT_NOISE = /(?:الجمهورية|الجزائرية|وزارة|مديرية|وثيقة|الصفحة|رقم|السوق|التاريخ|ولاية|بلدية)/u;
+
 function plausibleProduct(value: string): boolean {
   const product = cleanProduct(value);
   const letters = product.match(/\p{L}/gu)?.length ?? 0;
-  return letters >= 3 && !/\d/u.test(product);
+  return letters >= 3 && !/\d/u.test(product) && !DOCUMENT_NOISE.test(product);
 }
 
 function candidate(productRaw: string, aRaw: string, bRaw?: string): PriceCandidate | null {
@@ -30,6 +32,9 @@ function candidate(productRaw: string, aRaw: string, bRaw?: string): PriceCandid
 
   // Wholesale OCR without an explicit currency marker is too noisy below 10 DZD.
   if (a < 10 || b < 10) return null;
+  const low = Math.min(a, b);
+  const high = Math.max(a, b);
+  if (low > 0 && high / low > 3) return null;
 
   return {
     product,
