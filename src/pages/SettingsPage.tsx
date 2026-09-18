@@ -1,3 +1,4 @@
+import { safeExternalHttpUrl } from "../security/externalUrl";
 import {
   type ChangeEvent,
   type FormEvent,
@@ -377,7 +378,7 @@ export default function SettingsPage() {
                   <p className="muted source-meta">{source.market}</p>
                   <a
                     className="source-link"
-                    href={source.facebook_url}
+                    href={safeExternalHttpUrl(source.facebook_url) ?? undefined}
                     target="_blank"
                     rel="noreferrer"
                     dir="ltr"
