@@ -1,3 +1,5 @@
+import { shouldUseGemini } from "../gemini/fallbackPolicy";
+import type { GeminiPriceCandidate } from "../gemini/extraction";
 import { applyProductAlias } from "../aliases/productAliases";
 import type { NormalizedFacebookPost } from "../apify/apifyAdapter";
 import type { AppDatabase } from "../db/database";
@@ -41,6 +43,7 @@ export interface ReviewCandidate {
   raw_text: string;
   image_url?: string;
   confidence: Confidence;
+  ai_assisted?: boolean;
 }
 
 export class MissingRefreshConfigurationError extends Error {
@@ -63,12 +66,18 @@ export interface ManualRefreshOptions {
   ocrEngine: OcrEngine;
   signal?: AbortSignal;
   onProgress?: (event: RefreshProgressEvent) => void;
+  gemini?: {
+    enabled: boolean;
+    apiKey: string | null;
+    extract: (apiKey: string, evidence: { postText: string; ocrText: string; signal?: AbortSignal }) => Promise<GeminiPriceCandidate[]>;
+  };
 }
 
 export interface ManualRefreshResult {
   runId: string;
   candidates: ReviewCandidate[];
   errors: string[];
+  diagnostics: { posts: number; images_processed: number; image_failures: number; gemini_attempted: number; gemini_failed: number };
 }
 
 function throwIfAborted(signal?: AbortSignal) {
@@ -141,8 +150,12 @@ export async function runManualRefresh(
   const startedAt = new Date().toISOString();
   const errors: string[] = [];
   const candidates: ReviewCandidate[] = [];
+  const deterministicByPost = new Map<string, ReturnType<typeof parsePriceCandidates>>();
+  const ocrTextByPost = new Map<string, string[]>();
   let posts: NormalizedFacebookPost[] = [];
   let imagesProcessed = 0;
+  let geminiAttempted = 0;
+  let geminiFailed = 0;
 
   await options.db.runs.add({
     id: runId,
@@ -192,7 +205,9 @@ export async function runManualRefresh(
       continue;
     }
 
-    for (const parsed of parsePriceCandidates(post.text)) {
+    const textParsed = parsePriceCandidates(post.text);
+    deterministicByPost.set(post.post_id, [...(deterministicByPost.get(post.post_id) ?? []), ...textParsed]);
+    for (const parsed of textParsed) {
       candidates.push(
         await candidateFromParsed(
           options.db,
@@ -241,8 +256,11 @@ export async function runManualRefresh(
       throwIfAborted(options.signal);
       const ocr = await options.ocrEngine.recognize(blob);
       imagesProcessed += 1;
+      ocrTextByPost.set(job.post.post_id, [...(ocrTextByPost.get(job.post.post_id) ?? []), ocr.text].filter(Boolean));
+      const ocrParsed = parsePriceCandidates(ocr.text);
+      deterministicByPost.set(job.post.post_id, [...(deterministicByPost.get(job.post.post_id) ?? []), ...ocrParsed]);
 
-      for (const parsed of parsePriceCandidates(ocr.text)) {
+      for (const parsed of ocrParsed) {
         candidates.push(
           await candidateFromParsed(
             options.db,
@@ -270,6 +288,27 @@ export async function runManualRefresh(
     });
   }
 
+  if (options.gemini?.enabled && options.gemini.apiKey) {
+    for (const post of posts) {
+      if (post.unavailable) continue;
+      const deterministic = deterministicByPost.get(post.post_id) ?? [];
+      if (!shouldUseGemini(deterministic, true, true)) continue;
+      geminiAttempted += 1;
+      try {
+        const ai = await options.gemini.extract(options.gemini.apiKey, { postText: post.text, ocrText: (ocrTextByPost.get(post.post_id) ?? []).join("\n"), signal: options.signal });
+        for (const parsed of ai) {
+          const candidate = await candidateFromParsed(options.db, post, parsed, post.image_urls.length ? "image_ocr" : "post_text");
+          candidate.ai_assisted = true;
+          candidates.push(candidate);
+        }
+      } catch (error) {
+        if (options.signal?.aborted) throw error;
+        geminiFailed += 1;
+        errors.push("gemini_failed");
+      }
+    }
+  }
+
   const deduplicated = deduplicateReviewCandidates(candidates);
 
   await options.db.runs.update(runId, {
@@ -290,5 +329,6 @@ export async function runManualRefresh(
     runId,
     candidates: deduplicated,
     errors,
+    diagnostics: { posts: posts.length, images_processed: imagesProcessed, image_failures: errors.filter((error) => error !== "gemini_failed").length, gemini_attempted: geminiAttempted, gemini_failed: geminiFailed },
   };
 }
