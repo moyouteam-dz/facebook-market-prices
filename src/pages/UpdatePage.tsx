@@ -9,7 +9,7 @@ import { normalizeCollectedFacebookItems } from "../apify/normalizeCollectedItem
 import { getApifyToken, getGeminiApiKey } from "../db/secrets";
 import { getGeminiFallbackEnabled } from "../gemini/settings";
 import { extractPricesWithGemini } from "../gemini/extraction";
-import { createArabicPaddleOcrEngine } from "../ocr/paddleOcrEngine";
+import { createArabicTesseractOcrEngine } from "../ocr/tesseractOcrEngine";
 import type { OcrEngine } from "../ocr/types";
 import {
   runManualRefresh,
@@ -67,7 +67,7 @@ function progressLabel(progress: RefreshProgressEvent | null) {
 export default function UpdatePage({
   database = defaultDb,
   collectPosts = defaultCollector,
-  createOcrEngine = createArabicPaddleOcrEngine,
+  createOcrEngine = createArabicTesseractOcrEngine,
   setReviewSession,
   navigate,
 }: UpdatePageProps) {
