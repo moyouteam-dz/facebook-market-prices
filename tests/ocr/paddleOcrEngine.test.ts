@@ -17,10 +17,11 @@ describe("Arabic PaddleOCR engine", () => {
     const engine = createArabicPaddleOcrEngine(async () => ({ PaddleOCR: { create } }));
     const result = await engine.recognize(new Blob(["image"], { type: "image/jpeg" }));
 
-    expect(create).toHaveBeenCalledWith(
+    const options=create.mock.calls[0]?.[0];
+    expect(options).toEqual(
       expect.objectContaining({
-        lang: "ar",
-        ocrVersion: "PP-OCRv5",
+        textDetectionModelName: "PP-OCRv5_mobile_det",
+        textRecognitionModelName: "arabic_PP-OCRv5_mobile_rec",
         worker: true,
         ortOptions: expect.objectContaining({
           backend: "wasm",
@@ -30,6 +31,8 @@ describe("Arabic PaddleOCR engine", () => {
         }),
       }),
     );
+    expect(options).not.toHaveProperty("lang");
+    expect(options).not.toHaveProperty("ocrVersion");
     expect(result.text).toBe("بطاطا 80 دج\nبصل 35-40 دج");
     expect(result.confidence).toBeCloseTo(0.88);
     await engine.dispose?.();
