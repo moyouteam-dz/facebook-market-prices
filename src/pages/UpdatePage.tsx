@@ -6,6 +6,7 @@ import {
   type NormalizedFacebookPost,
 } from "../apify/apifyAdapter";
 import { db as defaultDb, type AppDatabase } from "../db/database";
+import { matchSourceForApifyItem } from "../apify/sourceMatch";
 import { getApifyToken } from "../db/secrets";
 import { createArabicPaddleOcrEngine } from "../ocr/paddleOcrEngine";
 import type { OcrEngine } from "../ocr/types";
@@ -41,18 +42,7 @@ const defaultCollector: Collector = async (token, sources, signal) => {
   });
 
   return raw.map((item) => {
-    const inputUrl =
-      typeof item === "object" && item !== null && "inputUrl" in item
-        ? String((item as { inputUrl?: unknown }).inputUrl ?? "")
-        : "";
-    const raw = typeof item === "object" && item !== null ? item as Record<string, unknown> : {};
-    const topLevelUrl = typeof raw.topLevelUrl === "string" ? raw.topLevelUrl : "";
-    const source = sources.find((candidate) => {
-      const expected = candidate.facebook_url.replace(/\/$/, "");
-      return [inputUrl, topLevelUrl]
-        .map((value) => value.replace(/\/$/, ""))
-        .some((value) => value === expected || value.startsWith(expected + "/"));
-    });
+    const source = matchSourceForApifyItem(item, sources);
 
     return normalizeApifyFacebookItem(item, {
       sourceId: source?.id ?? "unknown",
