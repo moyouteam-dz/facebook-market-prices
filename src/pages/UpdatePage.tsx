@@ -1,12 +1,11 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
-  normalizeApifyFacebookItem,
   runFacebookPostsActor,
   type NormalizedFacebookPost,
 } from "../apify/apifyAdapter";
 import { db as defaultDb, type AppDatabase } from "../db/database";
-import { matchSourceForApifyItem } from "../apify/sourceMatch";
+import { normalizeCollectedFacebookItems } from "../apify/normalizeCollectedItems";
 import { getApifyToken } from "../db/secrets";
 import { createArabicPaddleOcrEngine } from "../ocr/paddleOcrEngine";
 import type { OcrEngine } from "../ocr/types";
@@ -41,14 +40,8 @@ const defaultCollector: Collector = async (token, sources, signal) => {
     signal,
   });
 
-  return raw.map((item) => {
-    const source = matchSourceForApifyItem(item, sources);
+  return normalizeCollectedFacebookItems(raw, sources);
 
-    return normalizeApifyFacebookItem(item, {
-      sourceId: source?.id ?? "unknown",
-      market: source?.market ?? "",
-    });
-  });
 };
 
 async function fetchImage(url: string, signal?: AbortSignal) {
