@@ -17,7 +17,15 @@ describe("Arabic Tesseract OCR engine", () => {
       .resolves.toEqual({ text: "بصل 35-40 دج", confidence: 0.83 });
 
     expect(createWorker).toHaveBeenCalledTimes(1);
-    expect(createWorker).toHaveBeenCalledWith("ara", 1);
+    expect(createWorker).toHaveBeenCalledWith(
+      "ara",
+      1,
+      expect.objectContaining({
+        workerPath: expect.stringContaining("worker.min.js"),
+        langPath: expect.stringContaining("tessdata"),
+        corePath: expect.stringContaining("tesseract.js-core"),
+      }),
+    );
     expect(recognize).toHaveBeenCalledTimes(2);
 
     await engine.dispose?.();
