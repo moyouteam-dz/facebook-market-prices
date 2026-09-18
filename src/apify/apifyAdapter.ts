@@ -1,3 +1,4 @@
+import { buildFacebookActorInput } from "./actorInput";
 export const FACEBOOK_POSTS_ACTOR_ID = "apify~facebook-posts-scraper";
 const APIFY_API_BASE = "https://api.apify.com/v2";
 
@@ -55,16 +56,16 @@ export function buildFacebookPostsInput(
   pageUrls: string[],
   options?: { resultsLimit?: number; onlyPostsNewerThan?: string },
 ): FacebookPostsInput {
-  const urls = pageUrls.map((url) => url.trim()).filter(Boolean);
-  if (urls.length === 0) {
+  const input = buildFacebookActorInput(pageUrls);
+  if (input.startUrls.length === 0) {
     throw new Error("no_facebook_sources");
   }
 
   return {
-    captionText: false,
-    resultsLimit: options?.resultsLimit ?? 20,
-    onlyPostsNewerThan: options?.onlyPostsNewerThan ?? "7 days",
-    startUrls: urls.map((url) => ({ url })),
+    ...input,
+    resultsLimit: options?.resultsLimit ?? input.resultsLimit,
+    onlyPostsNewerThan:
+      options?.onlyPostsNewerThan ?? input.onlyPostsNewerThan,
   };
 }
 
