@@ -77,7 +77,7 @@ export interface ManualRefreshResult {
   runId: string;
   candidates: ReviewCandidate[];
   errors: string[];
-  diagnostics: { posts: number; images_processed: number; image_failures: number; gemini_attempted: number; gemini_failed: number };
+  diagnostics: { posts: number; images_processed: number; image_failures: number; image_failure_categories: Record<string, number>; gemini_attempted: number; gemini_failed: number; gemini_failure_categories: Record<string, number> };
 }
 
 function throwIfAborted(signal?: AbortSignal) {
@@ -156,6 +156,9 @@ export async function runManualRefresh(
   let imagesProcessed = 0;
   let geminiAttempted = 0;
   let geminiFailed = 0;
+  const imageFailureCategories: Record<string, number> = {};
+  const geminiFailureCategories: Record<string, number> = {};
+  const increment = (map: Record<string, number>, key: string) => { map[key] = (map[key] ?? 0) + 1; };
 
   await options.db.runs.add({
     id: runId,
@@ -276,9 +279,14 @@ export async function runManualRefresh(
         throw error;
       }
 
-      const reason =
-        error instanceof Error ? error.message : "image_ocr_failed";
-      errors.push(reason === "image_download_failed" ? "image_download_failed" : "image_ocr_failed");
+      const reason = error instanceof Error ? error.message : "image_ocr_failed";
+      const category = error instanceof TypeError && /fetch/i.test(reason)
+        ? "image_fetch_network"
+        : reason === "image_download_failed"
+          ? "image_http_failed"
+          : "image_ocr_failed";
+      increment(imageFailureCategories, category);
+      errors.push(category);
     }
 
     options.onProgress?.({
@@ -304,7 +312,10 @@ export async function runManualRefresh(
       } catch (error) {
         if (options.signal?.aborted) throw error;
         geminiFailed += 1;
-        errors.push("gemini_failed");
+        const reason = error instanceof Error ? error.message : "gemini_failed";
+        const category = /^gemini_http_\d{3}$/.test(reason) ? reason : reason === "gemini_request_failed" ? "gemini_request_failed" : "gemini_failed";
+        increment(geminiFailureCategories, category);
+        errors.push(category);
       }
     }
   }
@@ -329,6 +340,6 @@ export async function runManualRefresh(
     runId,
     candidates: deduplicated,
     errors,
-    diagnostics: { posts: posts.length, images_processed: imagesProcessed, image_failures: errors.filter((error) => error !== "gemini_failed").length, gemini_attempted: geminiAttempted, gemini_failed: geminiFailed },
+    diagnostics: { posts: posts.length, images_processed: imagesProcessed, image_failures: Object.values(imageFailureCategories).reduce((sum, count) => sum + count, 0), image_failure_categories: imageFailureCategories, gemini_attempted: geminiAttempted, gemini_failed: geminiFailed, gemini_failure_categories: geminiFailureCategories },
   };
 }
