@@ -62,8 +62,9 @@ export function createArabicPaddleOcrEngine(
   let pipelinePromise: Promise<PaddleInstance> | null = null;
 
   function getPipeline() {
-    pipelinePromise ??= importer().then(({ PaddleOCR }) =>
-      PaddleOCR.create({
+    if (!pipelinePromise) {
+      pipelinePromise = importer().then(({ PaddleOCR }) =>
+        PaddleOCR.create({
         lang: "ar",
         ocrVersion: "PP-OCRv5",
         worker: true,
@@ -75,15 +76,23 @@ export function createArabicPaddleOcrEngine(
           numThreads: 1,
           simd: true,
         },
-      }),
-    );
+        }),
+      ).catch(() => {
+        pipelinePromise = null;
+        throw new Error("ocr_init_failed");
+      });
+    }
     return pipelinePromise;
   }
 
   return {
     async recognize(image: Blob): Promise<OcrResult> {
       const pipeline = await getPipeline();
-      return toResult(await pipeline.predict(image));
+      try {
+        return toResult(await pipeline.predict(image));
+      } catch {
+        throw new Error("ocr_predict_failed");
+      }
     },
     async dispose() {
       if (!pipelinePromise) return;
