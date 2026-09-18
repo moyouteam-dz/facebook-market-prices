@@ -64,7 +64,7 @@ describe("manual update page", () => {
     );
 
     expect(await screen.findByText("سوق الشلف")).toBeInTheDocument();
-    await userEvent.click(screen.getByRole("checkbox", { name: /سوق الشلف/ }));
+    expect(screen.getByRole("checkbox", { name: /سوق الشلف/ })).toBeChecked();
     await userEvent.click(screen.getByRole("button", { name: "بدء التحديث" }));
 
     expect(await screen.findByText(/تم العثور على 1 نتيجة/)).toBeInTheDocument();
@@ -102,7 +102,7 @@ describe("manual update page", () => {
       </MemoryRouter>,
     );
 
-    await userEvent.click(await screen.findByRole("checkbox", { name: /سوق الشلف/ }));
+    expect(await screen.findByRole("checkbox", { name: /سوق الشلف/ })).toBeChecked();
     await userEvent.click(screen.getByRole("button", { name: "بدء التحديث" }));
     expect(await screen.findByText("أدخل مفتاح Apify أولًا من الإعدادات.")).toBeInTheDocument();
   });
