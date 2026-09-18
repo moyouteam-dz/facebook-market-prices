@@ -24,4 +24,18 @@ describe("OCR price parser", () => {
       expect.objectContaining({ product: "البصل", price_min: 35, price_max: 35 }),
     ]);
   });
+  it("rejects common Arabic document/header noise with plausible-looking numbers", () => {
+    expect(parseOcrPriceCandidates("الجمهورية الجزائرية 2026\nرقم الوثيقة 12734\nالصفحة 21\nالسوق 43")).toEqual([]);
+  });
+
+  it("rejects implausibly wide OCR ranges caused by unrelated table columns", () => {
+    expect(parseOcrPriceCandidates("البطاطا 35 750")).toEqual([]);
+  });
+
+  it("accepts common one-word Arabic vegetable names", () => {
+    expect(parseOcrPriceCandidates("لفت 80\nثوم 600")).toEqual([
+      expect.objectContaining({ product: "لفت", price_min: 80, price_max: 80 }),
+      expect.objectContaining({ product: "ثوم", price_min: 600, price_max: 600 }),
+    ]);
+  });
 });
