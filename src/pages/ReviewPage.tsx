@@ -1,3 +1,4 @@
+import { safeExternalHttpUrl } from "../security/externalUrl";
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { useReviewSession } from "../review/ReviewSessionContext";
@@ -157,9 +158,9 @@ export default function ReviewPage() {
                   loading="lazy"
                 />
               )}
-              {candidate.post_url && (
+              {safeExternalHttpUrl(candidate.post_url) && (
                 <a
-                  href={candidate.post_url}
+                  href={safeExternalHttpUrl(candidate.post_url) ?? undefined}
                   target="_blank"
                   rel="noreferrer"
                   className="source-link"
