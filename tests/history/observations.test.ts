@@ -14,7 +14,7 @@ describe("aliases, fingerprints, and deduplication", () => {
   let db: ReturnType<typeof createAppDatabase>;
 
   beforeEach(async () => {
-    db = createAppDatabase(\`dedup-test-\${crypto.randomUUID()}\`);
+    db = createAppDatabase("dedup-test-" + crypto.randomUUID());
     await db.open();
   });
 
