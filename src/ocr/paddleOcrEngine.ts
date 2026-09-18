@@ -17,9 +17,8 @@ interface PaddleInstance {
 interface PaddleModule {
   PaddleOCR: {
     create(options: {
-      lang: string;
-      ocrVersion: "PP-OCRv5";
       worker: boolean;
+      textDetectionModelName: string;
       textRecognitionModelName: string;
       textDetectionBatchSize: number;
       textRecognitionBatchSize: number;
@@ -66,9 +65,8 @@ export function createArabicPaddleOcrEngine(
     if (!pipelinePromise) {
       pipelinePromise = importer().then(({ PaddleOCR }) =>
         PaddleOCR.create({
-        lang: "ar",
-        ocrVersion: "PP-OCRv5",
         worker: true,
+        textDetectionModelName: "PP-OCRv5_mobile_det",
         textRecognitionModelName: "arabic_PP-OCRv5_mobile_rec",
         textDetectionBatchSize: 1,
         textRecognitionBatchSize: 1,
