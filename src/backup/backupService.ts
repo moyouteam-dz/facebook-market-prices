@@ -136,3 +136,26 @@ export function parseBackupJson(json: string): BackupDocument {
   validateBackup(parsed);
   return parsed;
 }
+
+
+export async function resetAllLocalData(db: AppDatabase): Promise<void> {
+  await db.transaction(
+    "rw",
+    db.secret_settings,
+    db.settings,
+    db.sources,
+    db.price_history,
+    db.product_aliases,
+    db.runs,
+    async () => {
+      await Promise.all([
+        db.secret_settings.clear(),
+        db.settings.clear(),
+        db.sources.clear(),
+        db.price_history.clear(),
+        db.product_aliases.clear(),
+        db.runs.clear(),
+      ]);
+    },
+  );
+}
