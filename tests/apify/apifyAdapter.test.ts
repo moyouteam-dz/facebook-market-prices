@@ -15,7 +15,7 @@ describe("Apify Facebook adapter", () => {
       ]),
     ).toEqual({
       captionText: false,
-      resultsLimit: 20,
+      resultsLimit: 5,
       onlyPostsNewerThan: "7 days",
       startUrls: [
         { url: "https://www.facebook.com/Emagfel" },
