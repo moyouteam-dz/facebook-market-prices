@@ -6,6 +6,7 @@ describe("Gemini extraction",()=>{it("validates structured DZD output and normal
  const result=await extractPricesWithGemini("secret",{postText:"بطاطا",ocrText:"80 100"},fetcher);
  expect(result).toEqual([expect.objectContaining({product:"بطاطا",price_min:80,price_max:100,currency:"DZD"})]);
  const init=fetcher.mock.calls[0]?.[1] as RequestInit;
- expect(JSON.stringify(init)).not.toContain("secret");
+ expect(fetcher.mock.calls[0]?.[0]).not.toContain("secret");
+ expect(String(init.body)).not.toContain("secret");
  expect((init.headers as Record<string,string>)["x-goog-api-key"]).toBe("secret");
 });});
