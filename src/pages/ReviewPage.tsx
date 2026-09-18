@@ -30,6 +30,7 @@ export default function ReviewPage() {
   }
 
   async function handleSave() {
+    if (!session) return;
     const invalid = session.candidates.find(
       (candidate) => candidate.accepted && !validateReviewCandidate(candidate).valid,
     );
