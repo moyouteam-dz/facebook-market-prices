@@ -23,6 +23,19 @@ it("sends image bytes to Gemini Vision and asks it to return only real visible p
  expect(String(fetcher.mock.calls[1]?.[1]?.body)).not.toContain("secret");
 });
 
+it("preserves the source image index returned by Gemini for multi-image evidence",async()=>{
+ const fetcher=vi.fn()
+  .mockResolvedValueOnce(json({models:[{name:"models/gemini-3.5-flash",supportedGenerationMethods:["generateContent"]}]}))
+  .mockResolvedValueOnce(json({candidates:[{content:{parts:[{text:JSON.stringify([{product:"طماطم",price_min:70,price_max:90,currency:"DZD",image_index:1}])}]}}]}));
+ const result=await extractPricesWithGemini("secret",{postText:"",ocrText:"",images:[
+  {mimeType:"image/jpeg",base64:"AQID"},
+  {mimeType:"image/jpeg",base64:"BAUG"}
+ ]},fetcher);
+ expect(result[0]).toEqual(expect.objectContaining({product:"طماطم",image_index:1}));
+ const body=JSON.parse(String(fetcher.mock.calls[1]?.[1]?.body));
+ expect(body.generationConfig.responseSchema.items.properties.image_index).toEqual(expect.objectContaining({type:"INTEGER"}));
+});
+
 it("retries another eligible model when the first model is quota-limited",async()=>{
  const fetcher=vi.fn()
   .mockResolvedValueOnce(json({models:[
