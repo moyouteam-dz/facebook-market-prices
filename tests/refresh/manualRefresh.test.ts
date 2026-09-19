@@ -35,7 +35,6 @@ describe("manual refresh orchestration", () => {
         sources: [source],
         collectPosts: vi.fn(),
         fetchImage: vi.fn(),
-        ocrEngine: { recognize: vi.fn() },
       }),
     ).rejects.toBeInstanceOf(MissingRefreshConfigurationError);
 
@@ -46,12 +45,11 @@ describe("manual refresh orchestration", () => {
         sources: [{ ...source, enabled: false }],
         collectPosts: vi.fn(),
         fetchImage: vi.fn(),
-        ocrEngine: { recognize: vi.fn() },
       }),
     ).rejects.toBeInstanceOf(MissingRefreshConfigurationError);
   });
 
-  it("parses post text, OCRs images sequentially, applies aliases, and does not auto-save", async () => {
+  it("parses post text, applies aliases, and does not auto-save before review", async () => {
     await rememberProductAlias(db, "بطاط", "بطاطا");
 
     const collectPosts = vi.fn().mockResolvedValue([
@@ -71,10 +69,6 @@ describe("manual refresh orchestration", () => {
     const fetchImage = vi
       .fn()
       .mockResolvedValue(new Blob(["image"], { type: "image/jpeg" }));
-    const recognize = vi.fn().mockResolvedValue({
-      text: "البصل 35-40 دج",
-      confidence: 0.9,
-    });
     const progress: string[] = [];
 
     const result = await runManualRefresh({
@@ -83,7 +77,6 @@ describe("manual refresh orchestration", () => {
       sources: [source],
       collectPosts,
       fetchImage,
-      ocrEngine: { recognize },
       onProgress: (event) => progress.push(event.stage),
     });
 
@@ -95,18 +88,10 @@ describe("manual refresh orchestration", () => {
           price_min: 80,
           price_max: 80,
           source_type: "post_text",
-        }),
-        expect.objectContaining({
-          product: "البصل",
-          price_min: 35,
-          price_max: 40,
-          source_type: "image_ocr",
-          image_url: "https://example.test/price.jpg",
-        }),
+        })
       ]),
     );
     expect(fetchImage).toHaveBeenCalledTimes(1);
-    expect(recognize).toHaveBeenCalledTimes(1);
     expect(await db.price_history.count()).toBe(0);
     expect(await db.runs.count()).toBe(1);
     expect(progress).toContain("collecting");
@@ -133,7 +118,6 @@ describe("manual refresh orchestration", () => {
         },
       ]),
       fetchImage: vi.fn().mockRejectedValue(new Error("network")),
-      ocrEngine: { recognize: vi.fn() },
     });
 
     expect(result.candidates).toHaveLength(1);
@@ -147,7 +131,7 @@ describe("manual refresh orchestration", () => {
     const result = await runManualRefresh({
       db, token: "token", sources: [source],
       collectPosts: vi.fn().mockResolvedValue([{ post_id:"ai-1",source_id:"source-1",source_page:"سوق الجملة",market:"الشلف",post_url:"https://facebook.com/p",post_date:"2026-09-18T00:00:00.000Z",text:"بطاطا",image_urls:[],unavailable:false }]),
-      fetchImage: vi.fn(), ocrEngine: { recognize: vi.fn() },
+      fetchImage: vi.fn(),
       gemini: { enabled: true, apiKey: "secret", extract },
     });
     expect(extract).toHaveBeenCalledTimes(1);
@@ -160,7 +144,7 @@ describe("manual refresh orchestration", () => {
     await runManualRefresh({
       db, token:"token", sources:[source],
       collectPosts: vi.fn().mockResolvedValue([{ post_id:"d-1",source_id:"source-1",source_page:"سوق الجملة",market:"الشلف",post_url:"https://facebook.com/p",post_date:"2026-09-18T00:00:00.000Z",text:"بطاطا 80 دج",image_urls:[],unavailable:false }]),
-      fetchImage: vi.fn(), ocrEngine:{recognize:vi.fn()}, gemini:{enabled:true,apiKey:"secret",extract},
+      fetchImage: vi.fn(), gemini:{enabled:true,apiKey:"secret",extract},
     });
     expect(extract).not.toHaveBeenCalled();
   });
@@ -174,7 +158,7 @@ describe("manual refresh orchestration", () => {
     const result = await runManualRefresh({
       db, token:"token", sources:[source],
       collectPosts: vi.fn().mockResolvedValue(posts),
-      fetchImage: vi.fn(), ocrEngine:{recognize:vi.fn()},
+      fetchImage: vi.fn(),
       gemini:{enabled:true,apiKey:"secret",extract},
     });
     expect(extract).toHaveBeenCalledTimes(1);
@@ -182,17 +166,14 @@ describe("manual refresh orchestration", () => {
     expect(result.diagnostics.gemini_failed).toBe(1);
     expect(result.diagnostics.gemini_failure_categories).toEqual({ gemini_http_429: 1 });
   });
-  it("uses Gemini Vision for post images without running local OCR", async () => {
+  it("uses Gemini Vision for post images", async () => {
     const extract = vi.fn().mockResolvedValue([{ product:"بصل", normalized_product:"بصل", price_min:35, price_max:40, currency:"DZD", confidence:"medium", raw_text:"بصل 35 40" }]);
-    const recognize = vi.fn();
     const result = await runManualRefresh({
       db, token:"token", sources:[source],
       collectPosts: vi.fn().mockResolvedValue([{ post_id:"vision-1",source_id:"source-1",source_page:"سوق الجملة",market:"الشلف",post_url:"https://facebook.com/vision-1",post_date:"2026-09-18T00:00:00.000Z",text:"",image_urls:["https://example.test/prices.jpg"],unavailable:false }]),
       fetchImage: vi.fn().mockResolvedValue({ type:"image/jpeg", arrayBuffer: async () => new Uint8Array([1,2,3]).buffer } as Blob),
-      ocrEngine:{recognize},
       gemini:{enabled:true,apiKey:"secret",extract},
     });
-    expect(recognize).not.toHaveBeenCalled();
     expect(extract).toHaveBeenCalledTimes(1);
     expect(extract.mock.calls[0]?.[1]?.images).toEqual([{mimeType:"image/jpeg",base64:"AQID"}]);
     expect(result.candidates[0]).toEqual(expect.objectContaining({product:"بصل",ai_assisted:true,image_url:"https://example.test/prices.jpg"}));

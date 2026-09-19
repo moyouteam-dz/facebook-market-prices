@@ -177,7 +177,7 @@ export default function ReviewPage() {
                 <dd>
                   {candidate.source_type === "post_text"
                     ? "نص المنشور"
-                    : "صورة OCR"}
+                    : "تحليل صورة بالذكاء الاصطناعي"}
                 </dd>
               </div>
               <div>

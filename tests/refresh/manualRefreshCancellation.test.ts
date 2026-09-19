@@ -31,7 +31,6 @@ describe("manual refresh cancellation", () => {
         return [];
       },
       fetchImage: vi.fn(),
-      ocrEngine: { recognize: vi.fn() },
       signal: controller.signal,
     });
 

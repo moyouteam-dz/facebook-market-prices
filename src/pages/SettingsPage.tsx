@@ -330,13 +330,13 @@ export default function SettingsPage() {
       </div>
 
       <div className="panel stack">
-        <div><h2>Gemini AI</h2><p className="muted">{hasGeminiKey ? "يوجد مفتاح Gemini محفوظ محليًا. لا نعرض قيمته مرة أخرى." : "اختياري: يُستخدم فقط عندما يفشل التحليل التقليدي أو تكون نتائجه منخفضة الثقة."}</p></div>
+        <div><h2>Gemini AI</h2><p className="muted">{hasGeminiKey ? "يوجد مفتاح Gemini محفوظ محليًا. لا نعرض قيمته مرة أخرى." : "أضف مفتاح Gemini لتحليل صور المنشورات واستخراج الأسعار الظاهرة فيها."}</p></div>
         <form className="stack source-form" onSubmit={handleGeminiSave}>
           <label><span>{hasGeminiKey ? "استبدال مفتاح Gemini" : "مفتاح Gemini"}</span><input dir="ltr" type="password" autoComplete="off" value={geminiInput} onChange={(event)=>setGeminiInput(event.target.value)} /></label>
           <button className="primary-action button-reset" type="submit" disabled={testingGemini}>{testingGemini ? "جارٍ الاختبار…" : "اختبار وحفظ مفتاح Gemini"}</button>
         </form>
         {hasGeminiKey && <button className="danger-action" type="button" onClick={()=>void handleGeminiDelete()}>حذف مفتاح Gemini</button>}
-        <label className="check-row"><input type="checkbox" checked={geminiEnabled} onChange={(event)=>void handleGeminiToggle(event.target.checked)} /><span>استخدام Gemini عند فشل التحليل</span></label>
+        <label className="check-row"><input type="checkbox" checked={geminiEnabled} onChange={(event)=>void handleGeminiToggle(event.target.checked)} /><span>استخدام Gemini لتحليل الصور</span></label>
         {geminiMessage && <p className="form-message">{geminiMessage}</p>}
       </div>
 
