@@ -88,4 +88,21 @@ describe("ReviewPage", () => {
     await user.click(screen.getByRole("button", { name: "استبعاد" }));
     expect(screen.getByText("مستبعد")).toBeInTheDocument();
   });
+  it("supports rejecting all candidates and restoring them in one action", async () => {
+    const user = userEvent.setup();
+    render(
+      <MemoryRouter>
+        <ReviewSessionProvider
+          initialSession={{ runId: "run-1", candidates: [candidate, { ...candidate, id: "c2", post_id: "p2" }] }}
+          saveHandler={vi.fn()}
+        >
+          <ReviewPage />
+        </ReviewSessionProvider>
+      </MemoryRouter>,
+    );
+    await user.click(screen.getByRole("button", { name: "استبعاد الكل" }));
+    expect(screen.getAllByText("مستبعد")).toHaveLength(2);
+    await user.click(screen.getByRole("button", { name: "إعادة الكل" }));
+    expect(screen.queryByText("مستبعد")).not.toBeInTheDocument();
+  });
 });
