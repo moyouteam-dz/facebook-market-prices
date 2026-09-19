@@ -132,4 +132,39 @@ describe("daily price posts", () => {
     expect(text).not.toContain("مصدر");
     expect(text).not.toContain("http");
   });
+
+  it("keeps the same product separated by market inside one daily post", () => {
+    const [daily] = groupPriceHistoryByDay([
+      record({ id: "a", market: "الشلف", product: "بطاطا", normalized_product: "بطاطا", price_min: 70, price_max: 80, source_id: "s1" }),
+      record({ id: "b", market: "وهران", product: "بطاطا", normalized_product: "بطاطا", price_min: 100, price_max: 110, source_id: "s2" }),
+    ]);
+
+    expect(daily.markets).toHaveLength(2);
+    expect(daily.markets.map((item) => item.market)).toEqual(["الشلف", "وهران"]);
+    expect(daily.markets[0].products[0]).toEqual(expect.objectContaining({
+      product: "بطاطا",
+      price_min: 70,
+      price_max: 80,
+    }));
+    expect(daily.markets[1].products[0]).toEqual(expect.objectContaining({
+      product: "بطاطا",
+      price_min: 100,
+      price_max: 110,
+    }));
+  });
+
+  it("includes market headings in the publish-ready daily post", () => {
+    const [daily] = groupPriceHistoryByDay([
+      record({ id: "a", market: "الشلف", product: "بطاطا", normalized_product: "بطاطا", price_min: 70, price_max: 80, source_id: "s1" }),
+      record({ id: "b", market: "وهران", product: "بطاطا", normalized_product: "بطاطا", price_min: 100, price_max: 110, source_id: "s2" }),
+    ]);
+
+    const text = formatDailyPricePostForPublishing(daily);
+
+    expect(text).toContain("سوق الشلف");
+    expect(text).toContain("بطاطا: 70–80 دج");
+    expect(text).toContain("سوق وهران");
+    expect(text).toContain("بطاطا: 100–110 دج");
+  });
+
 });

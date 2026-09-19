@@ -394,3 +394,32 @@ p {
     grid-template-columns: 1fr;
   }
 }
+
+
+.daily-market-section {
+  display: grid;
+  gap: 0;
+}
+
+.daily-market-section + .daily-market-section {
+  margin-top: 14px;
+  border-top: 1px solid #ddd6ea;
+  padding-top: 14px;
+}
+
+.daily-market-section h3,
+.daily-market-details > h3 {
+  margin: 0 0 8px;
+  font-size: 0.95rem;
+  color: #5b21b6;
+}
+
+.daily-market-details {
+  display: grid;
+  gap: 8px;
+}
+
+.daily-market-details + .daily-market-details {
+  border-top: 1px solid #ddd6ea;
+  padding-top: 12px;
+}

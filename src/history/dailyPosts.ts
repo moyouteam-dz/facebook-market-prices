@@ -10,9 +10,16 @@ export interface DailyProductSummary {
   records: PriceHistoryRecord[];
 }
 
+export interface DailyMarketSummary {
+  market: string;
+  products: DailyProductSummary[];
+  records: PriceHistoryRecord[];
+}
+
 export interface DailyPricePost {
   date: string;
   records: PriceHistoryRecord[];
+  markets: DailyMarketSummary[];
   products: DailyProductSummary[];
 }
 
@@ -114,10 +121,28 @@ export function groupPriceHistoryByDay(records: PriceHistoryRecord[]): DailyPric
     .sort(([a], [b]) => b.localeCompare(a))
     .map(([date, items]) => {
       const sortedRecords = [...items].sort((a, b) => b.post_date.localeCompare(a.post_date));
+      const marketMap = new Map<string, PriceHistoryRecord[]>();
+
+      for (const record of sortedRecords) {
+        const market = record.market.trim() || "سوق غير محدد";
+        const bucket = marketMap.get(market) ?? [];
+        bucket.push(record);
+        marketMap.set(market, bucket);
+      }
+
+      const markets = [...marketMap.entries()]
+        .sort(([a], [b]) => a.localeCompare(b, "ar"))
+        .map(([market, marketRecords]) => ({
+          market,
+          records: marketRecords,
+          products: summarizeProducts(marketRecords),
+        }));
+
       return {
         date,
         records: sortedRecords,
-        products: summarizeProducts(sortedRecords),
+        markets,
+        products: markets.flatMap((market) => market.products),
       };
     });
 }
@@ -133,13 +158,18 @@ function formatPublishDate(date: string): string {
 }
 
 export function formatDailyPricePostForPublishing(dailyPost: DailyPricePost): string {
-  const lines = dailyPost.products.map((product) => {
-    const price =
-      product.price_min === product.price_max
-        ? String(product.price_min)
-        : product.price_min + "–" + product.price_max;
-    return product.product + ": " + price + " دج";
+  const sections = dailyPost.markets.flatMap((market) => {
+    const lines = market.products.map((product) => {
+      const price =
+        product.price_min === product.price_max
+          ? String(product.price_min)
+          : product.price_min + "–" + product.price_max;
+      return product.product + ": " + price + " دج";
+    });
+    return ["سوق " + market.market, ...lines, ""];
   });
 
-  return ["أسعار اليوم — " + formatPublishDate(dailyPost.date), "", ...lines].join("\n");
+  return ["أسعار اليوم — " + formatPublishDate(dailyPost.date), "", ...sections]
+    .join("\n")
+    .trimEnd();
 }
