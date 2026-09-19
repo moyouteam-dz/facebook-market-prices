@@ -120,18 +120,26 @@ export default function HistoryPage() {
               </div>
 
               <div className="daily-price-list">
-                {dailyPost.products.map((product) => (
-                  <div className="daily-price-row" key={product.normalized_product}>
-                    <div className="daily-price-product">
-                      <strong>{product.product}</strong>
-                    </div>
-                    <div className="daily-price-value">
-                      {product.price_min === product.price_max
-                        ? product.price_min
-                        : product.price_min + " – " + product.price_max}
-                      <small> دج</small>
-                    </div>
-                  </div>
+                {dailyPost.markets.map((market) => (
+                  <section className="daily-market-section" key={market.market}>
+                    <h3>سوق {market.market}</h3>
+                    {market.products.map((product) => (
+                      <div
+                        className="daily-price-row"
+                        key={market.market + "|" + product.normalized_product}
+                      >
+                        <div className="daily-price-product">
+                          <strong>{product.product}</strong>
+                        </div>
+                        <div className="daily-price-value">
+                          {product.price_min === product.price_max
+                            ? product.price_min
+                            : product.price_min + " – " + product.price_max}
+                          <small> دج</small>
+                        </div>
+                      </div>
+                    ))}
+                  </section>
                 ))}
               </div>
 
@@ -174,41 +182,49 @@ export default function HistoryPage() {
 
               {expandedDates.has(dailyPost.date) ? (
                 <div className="daily-price-details">
-                  {dailyPost.products.map((product) => (
-                    <section className="daily-product-details" key={product.normalized_product}>
-                      <div className="daily-product-details-head">
-                        <strong>{product.product}</strong>
-                        <span className="muted">
-                          {product.source_count === 1
-                            ? "مصدر واحد"
-                            : product.source_count === 2
-                              ? "مصدران"
-                              : product.source_count + " مصادر"}
-                          {product.excluded_outlier_count > 0
-                            ? " · استُبعدت " + product.excluded_outlier_count + " قيمة شاذة من النطاق"
-                            : ""}
-                        </span>
-                      </div>
-                      <div className="daily-source-list">
-                        {product.records.map((record) => {
-                          const sourceUrl = safeExternalHttpUrl(record.post_url);
-                          return (
-                            <div className="daily-source-item" key={record.id}>
-                              <span>{record.source_page}</span>
-                              {sourceUrl ? (
-                                <a
-                                  className="source-link"
-                                  href={sourceUrl}
-                                  target="_blank"
-                                  rel="noreferrer"
-                                >
-                                  المصدر
-                                </a>
-                              ) : null}
-                            </div>
-                          );
-                        })}
-                      </div>
+                  {dailyPost.markets.map((market) => (
+                    <section className="daily-market-details" key={market.market}>
+                      <h3>سوق {market.market}</h3>
+                      {market.products.map((product) => (
+                        <section
+                          className="daily-product-details"
+                          key={market.market + "|" + product.normalized_product}
+                        >
+                          <div className="daily-product-details-head">
+                            <strong>{product.product}</strong>
+                            <span className="muted">
+                              {product.source_count === 1
+                                ? "مصدر واحد"
+                                : product.source_count === 2
+                                  ? "مصدران"
+                                  : product.source_count + " مصادر"}
+                              {product.excluded_outlier_count > 0
+                                ? " · استُبعدت " + product.excluded_outlier_count + " قيمة شاذة من النطاق"
+                                : ""}
+                            </span>
+                          </div>
+                          <div className="daily-source-list">
+                            {product.records.map((record) => {
+                              const sourceUrl = safeExternalHttpUrl(record.post_url);
+                              return (
+                                <div className="daily-source-item" key={record.id}>
+                                  <span>{record.source_page}</span>
+                                  {sourceUrl ? (
+                                    <a
+                                      className="source-link"
+                                      href={sourceUrl}
+                                      target="_blank"
+                                      rel="noreferrer"
+                                    >
+                                      المصدر
+                                    </a>
+                                  ) : null}
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </section>
+                      ))}
                     </section>
                   ))}
                 </div>
