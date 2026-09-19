@@ -100,4 +100,21 @@ describe("daily price posts", () => {
     }));
   });
 
+
+  it("orders daily products by source coverage, then by product name for a stable mobile list", () => {
+    const groups = groupPriceHistoryByDay([
+      record({ id: "a", product: "طماطم", normalized_product: "طماطم", price_min: 70, price_max: 70, source_id: "s1" }),
+      record({ id: "b", product: "بطاطا", normalized_product: "بطاطا", price_min: 80, price_max: 80, source_id: "s1" }),
+      record({ id: "c", product: "بطاطا", normalized_product: "بطاطا", price_min: 85, price_max: 85, source_id: "s2" }),
+      record({ id: "d", product: "بصل", normalized_product: "بصل", price_min: 40, price_max: 40, source_id: "s1" }),
+      record({ id: "e", product: "بصل", normalized_product: "بصل", price_min: 45, price_max: 45, source_id: "s2" }),
+    ]);
+
+    expect(groups[0].products.map((item) => [item.product, item.source_count])).toEqual([
+      ["بطاطا", 2],
+      ["بصل", 2],
+      ["طماطم", 1],
+    ]);
+  });
+
 });
