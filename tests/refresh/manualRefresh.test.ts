@@ -166,6 +166,23 @@ describe("manual refresh orchestration", () => {
     expect(result.diagnostics.gemini_failed).toBe(1);
     expect(result.diagnostics.gemini_failure_categories).toEqual({ gemini_http_429: 1 });
   });
+  it("attaches each Gemini result to the image index it came from", async () => {
+    const extract = vi.fn().mockResolvedValue([
+      { product:"طماطم", normalized_product:"طماطم", price_min:70, price_max:90, currency:"DZD", confidence:"medium", raw_text:"طماطم 70 90", image_index:1 },
+    ]);
+    const result = await runManualRefresh({
+      db, token:"token", sources:[source],
+      collectPosts: vi.fn().mockResolvedValue([{ post_id:"vision-multi",source_id:"source-1",source_page:"سوق الجملة",market:"الشلف",post_url:"https://facebook.com/vision-multi",post_date:"2026-09-18T00:00:00.000Z",text:"",image_urls:["https://example.test/first.jpg","https://example.test/second.jpg"],unavailable:false }]),
+      fetchImage: vi.fn()
+        .mockResolvedValueOnce({ type:"image/jpeg", arrayBuffer: async () => new Uint8Array([1,2,3]).buffer } as Blob)
+        .mockResolvedValueOnce({ type:"image/jpeg", arrayBuffer: async () => new Uint8Array([4,5,6]).buffer } as Blob),
+      gemini:{enabled:true,apiKey:"secret",extract},
+    });
+    expect(result.candidates[0]).toEqual(expect.objectContaining({
+      product:"طماطم",
+      image_url:"https://example.test/second.jpg",
+    }));
+  });
   it("uses Gemini Vision for post images", async () => {
     const extract = vi.fn().mockResolvedValue([{ product:"بصل", normalized_product:"بصل", price_min:35, price_max:40, currency:"DZD", confidence:"medium", raw_text:"بصل 35 40" }]);
     const result = await runManualRefresh({
