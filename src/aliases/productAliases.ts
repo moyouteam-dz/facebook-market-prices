@@ -1,7 +1,25 @@
-import type { AppDatabase } from "../db/database";
+import type { AppDatabase, ProductAliasRecord } from "../db/database";
 
 function normalizeName(value: string): string {
   return value.trim().replace(/\s+/g, " ");
+}
+
+function aliasKey(value: string): string {
+  return normalizeName(value)
+    .normalize("NFD")
+    .replace(/\p{M}+/gu, "")
+    .toLocaleLowerCase();
+}
+
+async function findAlias(
+  db: AppDatabase,
+  productName: string,
+): Promise<ProductAliasRecord | undefined> {
+  const key = aliasKey(productName);
+  if (!key) return undefined;
+
+  const aliases = await db.product_aliases.toArray();
+  return aliases.find((alias) => aliasKey(alias.observed_name) === key);
 }
 
 export async function rememberProductAlias(
@@ -16,10 +34,7 @@ export async function rememberProductAlias(
     throw new Error("alias_name_required");
   }
 
-  const existing = await db.product_aliases
-    .where("observed_name")
-    .equals(observed_name)
-    .first();
+  const existing = await findAlias(db, observed_name);
   const now = new Date().toISOString();
 
   await db.product_aliases.put({
@@ -36,10 +51,7 @@ export async function applyProductAlias(
   productName: string,
 ): Promise<string> {
   const observed = normalizeName(productName);
-  const alias = await db.product_aliases
-    .where("observed_name")
-    .equals(observed)
-    .first();
+  const alias = await findAlias(db, observed);
 
   return alias?.canonical_name ?? observed;
 }
