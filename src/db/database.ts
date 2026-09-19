@@ -32,7 +32,7 @@ export interface PriceHistoryRecord {
   source_page: string;
   post_id: string;
   post_url: string;
-  source_type: "post_text" | "image_ocr";
+  source_type: "post_text" | "image_ocr" | "image_ai";
   raw_text: string;
   image_url?: string;
   post_date: string;
