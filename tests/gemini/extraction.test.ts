@@ -9,4 +9,17 @@ describe("Gemini extraction",()=>{it("validates structured DZD output and normal
  expect(result).toEqual([expect.objectContaining({product:"بطاطا",price_min:80,price_max:100,currency:"DZD"})]);
  for(const call of fetcher.mock.calls){expect(call[0]).not.toContain("secret"); expect(String(call[1]?.body??"")).not.toContain("secret"); expect((call[1]?.headers as Record<string,string>)["x-goog-api-key"]).toBe("secret");}
  expect(fetcher.mock.calls[1]?.[0]).toContain("gemini-3.5-flash:generateContent");
-});});
+});
+it("sends image bytes to Gemini Vision and asks it to return only real visible prices",async()=>{
+ const fetcher=vi.fn()
+  .mockResolvedValueOnce(json({models:[{name:"models/gemini-3.5-flash",supportedGenerationMethods:["generateContent"]}]}))
+  .mockResolvedValueOnce(json({candidates:[{content:{parts:[{text:JSON.stringify([{product:"بصل",price_min:35,price_max:40,currency:"DZD"}])}]}}]}));
+ await extractPricesWithGemini("secret",{postText:"",ocrText:"",images:[{mimeType:"image/jpeg",base64:"AQID"}]},fetcher);
+ const body=JSON.parse(String(fetcher.mock.calls[1]?.[1]?.body));
+ expect(body.contents[0].parts).toEqual(expect.arrayContaining([
+  expect.objectContaining({text:expect.stringContaining("الصورة")}),
+  {inlineData:{mimeType:"image/jpeg",data:"AQID"}},
+ ]));
+ expect(String(fetcher.mock.calls[1]?.[1]?.body)).not.toContain("secret");
+});
+});
