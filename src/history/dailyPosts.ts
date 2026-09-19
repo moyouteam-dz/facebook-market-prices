@@ -92,7 +92,12 @@ function summarizeProducts(records: PriceHistoryRecord[]): DailyProductSummary[]
     existing.excluded_outlier_count = range.excluded_outlier_count;
   }
 
-  return [...byProduct.values()];
+  return [...byProduct.values()].sort((a, b) => {
+    if (a.source_count !== b.source_count) {
+      return b.source_count - a.source_count;
+    }
+    return a.product.localeCompare(b.product, "ar");
+  });
 }
 
 export function groupPriceHistoryByDay(records: PriceHistoryRecord[]): DailyPricePost[] {
