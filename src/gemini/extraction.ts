@@ -26,9 +26,8 @@ function validateItem(value: unknown, rawText: string, imageCount: number): Gemi
   const min = Number(item.price_min);
   const max = Number(item.price_max);
   if (!product || item.currency !== "DZD" || !Number.isFinite(min) || !Number.isFinite(max) || min < 0 || max < 0) return null;
-  const imageIndex = Number(item.image_index);
-  const validImageIndex = Number.isInteger(imageIndex) && imageIndex >= 0 && imageIndex < imageCount
-    ? imageIndex
+  const validImageIndex = typeof item.image_index === "number" && Number.isInteger(item.image_index) && item.image_index >= 0 && item.image_index < imageCount
+    ? item.image_index
     : undefined;
   return {
     product,
