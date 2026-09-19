@@ -139,6 +139,18 @@ describe("manual refresh orchestration", () => {
     expect(await db.price_history.count()).toBe(0);
   });
 
+  it("falls back to Gemini instead of trusting an ambiguous bare number from post text", async () => {
+    const extract = vi.fn().mockResolvedValue([{ product:"بطاطا", normalized_product:"بطاطا", price_min:80, price_max:80, currency:"DZD", confidence:"medium", raw_text:"بطاطا 80 دج" }]);
+    const result = await runManualRefresh({
+      db, token:"token", sources:[source],
+      collectPosts: vi.fn().mockResolvedValue([{ post_id:"ambiguous-1",source_id:"source-1",source_page:"سوق الجملة",market:"الشلف",post_url:"https://facebook.com/ambiguous-1",post_date:"2026-09-18T00:00:00.000Z",text:"الهاتف 0550123456",image_urls:[],unavailable:false }]),
+      fetchImage: vi.fn(), gemini:{enabled:true,apiKey:"secret",extract},
+    });
+    expect(extract).toHaveBeenCalledTimes(1);
+    expect(result.candidates).toEqual([
+      expect.objectContaining({ product:"بطاطا", ai_assisted:true })
+    ]);
+  });
   it("does not call Gemini when deterministic extraction is medium or high confidence", async () => {
     const extract = vi.fn();
     await runManualRefresh({
