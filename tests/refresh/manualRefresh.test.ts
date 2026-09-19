@@ -188,7 +188,7 @@ describe("manual refresh orchestration", () => {
     const result = await runManualRefresh({
       db, token:"token", sources:[source],
       collectPosts: vi.fn().mockResolvedValue([{ post_id:"vision-1",source_id:"source-1",source_page:"سوق الجملة",market:"الشلف",post_url:"https://facebook.com/vision-1",post_date:"2026-09-18T00:00:00.000Z",text:"",image_urls:["https://example.test/prices.jpg"],unavailable:false }]),
-      fetchImage: vi.fn().mockResolvedValue(new Blob([new Uint8Array([1,2,3])],{type:"image/jpeg"})),
+      fetchImage: vi.fn().mockResolvedValue({ type:"image/jpeg", arrayBuffer: async () => new Uint8Array([1,2,3]).buffer } as Blob),
       ocrEngine:{recognize},
       gemini:{enabled:true,apiKey:"secret",extract},
     });
