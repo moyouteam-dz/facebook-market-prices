@@ -82,6 +82,16 @@ export interface ManualRefreshResult {
   diagnostics: { posts: number; images_processed: number; image_failures: number; image_failure_categories: Record<string, number>; gemini_attempted: number; gemini_failed: number; gemini_failure_categories: Record<string, number> };
 }
 
+async function blobToBase64(blob: Blob): Promise<string> {
+  const bytes = new Uint8Array(await blob.arrayBuffer());
+  const chunkSize = 0x8000;
+  let binary = "";
+  for (let offset = 0; offset < bytes.length; offset += chunkSize) {
+    binary += String.fromCharCode(...bytes.subarray(offset, offset + chunkSize));
+  }
+  return btoa(binary);
+}
+
 function throwIfAborted(signal?: AbortSignal) {
   if (signal?.aborted) {
     throw new DOMException("refresh_cancelled", "AbortError");
@@ -252,12 +262,10 @@ export async function runManualRefresh(
       imagesProcessed += 1;
 
       if (options.gemini?.enabled && options.gemini.apiKey) {
-        const bytes = new Uint8Array(await blob.arrayBuffer());
-        let binary = "";
-        for (const byte of bytes) binary += String.fromCharCode(byte);
+        const base64 = await blobToBase64(blob);
         aiImagesByPost.set(job.post.post_id, [
           ...(aiImagesByPost.get(job.post.post_id) ?? []),
-          { mimeType: blob.type || "image/jpeg", base64: btoa(binary), imageUrl: job.imageUrl },
+          { mimeType: blob.type || "image/jpeg", base64, imageUrl: job.imageUrl },
         ]);
       } else {
         const ocr = await options.ocrEngine.recognize(blob);
