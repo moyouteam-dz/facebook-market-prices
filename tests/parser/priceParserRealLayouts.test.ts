@@ -23,4 +23,10 @@ describe("price parser with real Facebook/OCR layouts", () => {
       }),
     ]);
   });
+  it("rejects a bare single number without currency so phone numbers, years, and quantities are not treated as prices", () => {
+    expect(parsePriceCandidates("الهاتف 0550123456")).toEqual([]);
+    expect(parsePriceCandidates("سنة 2026")).toEqual([]);
+    expect(parsePriceCandidates("الكمية 25")).toEqual([]);
+  });
+
 });
