@@ -1,4 +1,3 @@
-import { safeExternalHttpUrl } from "../security/externalUrl";
 import { type FormEvent, useEffect, useState } from "react";
 import { db, type PriceHistoryRecord } from "../db/database";
 import {
@@ -114,34 +113,25 @@ export default function HistoryPage() {
                     day: "numeric",
                   })}</h2>
                 </div>
-                <span className="daily-price-count">{dailyPost.records.length} سعر</span>
+                <span className="daily-price-count">{dailyPost.products.length} منتج</span>
               </div>
 
               <div className="daily-price-list">
-                {dailyPost.records.map((record) => (
-                  <div className="daily-price-row" key={record.id}>
+                {dailyPost.products.map((product) => (
+                  <div className="daily-price-row" key={product.normalized_product}>
                     <div className="daily-price-product">
-                      <strong>{record.product}</strong>
-                      <span className="muted">{record.market}</span>
+                      <strong>{product.product}</strong>
+                      <span className="muted">
+                        {product.source_count === 1
+                          ? "مصدر واحد"
+                          : product.source_count + " مصادر"}
+                      </span>
                     </div>
                     <div className="daily-price-value">
-                      {record.price_min === record.price_max
-                        ? record.price_min
-                        : record.price_min + " – " + record.price_max}
+                      {product.price_min === product.price_max
+                        ? product.price_min
+                        : product.price_min + " – " + product.price_max}
                       <small> دج</small>
-                    </div>
-                    <div className="daily-price-source">
-                      <span className="muted">{record.source_page}</span>
-                      {safeExternalHttpUrl(record.post_url) ? (
-                        <a
-                          className="source-link"
-                          href={safeExternalHttpUrl(record.post_url) ?? undefined}
-                          target="_blank"
-                          rel="noreferrer"
-                        >
-                          المصدر
-                        </a>
-                      ) : null}
                     </div>
                   </div>
                 ))}
