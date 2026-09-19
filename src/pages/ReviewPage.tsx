@@ -15,6 +15,17 @@ export default function ReviewPage() {
   const [saving, setSaving] = useState(false);
   const [summary, setSummary] = useState("");
 
+  const acceptedCount = session?.candidates.filter((candidate) => candidate.accepted).length ?? 0;
+
+  function setAllAccepted(accepted: boolean) {
+    if (!session) return;
+    for (const candidate of session.candidates) {
+      if (candidate.accepted !== accepted) {
+        updateCandidate(candidate.id, { accepted });
+      }
+    }
+  }
+
   if (!session || session.candidates.length === 0) {
     return (
       <section className="stack">
@@ -73,6 +84,18 @@ export default function ReviewPage() {
         <p className="muted">
           صحح المنتج أو السعر واستبعد أي نتيجة غير صحيحة. لن يُحفظ شيء قبل ضغط «حفظ النتائج».
         </p>
+      </div>
+
+      <div className="review-toolbar panel">
+        <strong>{acceptedCount} من {session.candidates.length} محددة للحفظ</strong>
+        <div className="review-toolbar-actions">
+          <button className="secondary-action" type="button" onClick={() => setAllAccepted(false)}>
+            استبعاد الكل
+          </button>
+          <button className="secondary-action" type="button" onClick={() => setAllAccepted(true)}>
+            إعادة الكل
+          </button>
+        </div>
       </div>
 
       <div className="review-list">
@@ -226,7 +249,7 @@ export default function ReviewPage() {
         <button
           className="primary-action button-reset"
           type="button"
-          disabled={saving}
+          disabled={saving || acceptedCount === 0}
           onClick={() => void handleSave()}
         >
           {saving ? "جارٍ الحفظ…" : "حفظ النتائج"}
