@@ -9,7 +9,7 @@ export interface FingerprintInput {
   normalized_product: string;
   price_min: number;
   price_max: number;
-  source_type: "post_text" | "image_ocr";
+  source_type: "post_text" | "image_ocr" | "image_ai";
 }
 
 export interface CandidateForDedup extends FingerprintInput {
