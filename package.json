@@ -11,13 +11,10 @@
     "typecheck": "tsc -b --pretty false"
   },
   "dependencies": {
-    "@paddleocr/paddleocr-js": "^0.4.2",
     "dexie": "^4.0.0",
-    "onnxruntime-web": "^1.22.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
-    "react-router-dom": "^7.0.0",
-    "tesseract.js": "^7.0.0"
+    "react-router-dom": "^7.0.0"
   },
   "devDependencies": {
     "@testing-library/jest-dom": "^6.0.0",
