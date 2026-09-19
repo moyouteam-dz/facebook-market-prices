@@ -60,7 +60,7 @@ function progressLabel(progress: RefreshProgressEvent | null) {
       : ` (${progress.completed ?? 0}/${progress.total})`;
   if (progress.stage === "collecting") return "جارٍ جلب المنشورات…";
   if (progress.stage === "parsing") return "جارٍ تحليل النصوص…" + count;
-  if (progress.stage === "ocr") return "جارٍ قراءة الصور محليًا…" + count;
+  if (progress.stage === "ocr") return "جارٍ تحليل الصور…" + count;
   return "النتائج جاهزة للمراجعة.";
 }
 
@@ -179,7 +179,7 @@ export default function UpdatePage({
         <p className="eyebrow">تحديث يدوي فقط</p>
         <h1>تحديث الأسعار</h1>
         <p className="muted">
-          اختر الصفحات ثم ابدأ. الصور تُقرأ محليًا على جهازك قبل إرسال النتائج للمراجعة.
+          اختر الصفحات ثم ابدأ. عند تفعيل Gemini، تُحلل صور المنشورات بالذكاء الاصطناعي لاستخراج الأسعار الظاهرة فقط، ثم تُرسل النتائج للمراجعة قبل الحفظ.
         </p>
       </div>
 
