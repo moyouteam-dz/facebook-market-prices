@@ -5,11 +5,13 @@ import {
   type HistoryQuery,
 } from "../history/historyExport";
 import { groupPriceHistoryByDay } from "../history/dailyPosts";
+import { safeExternalHttpUrl } from "../security/externalUrl";
 
 export default function HistoryPage() {
   const [records, setRecords] = useState<PriceHistoryRecord[]>([]);
   const [filters, setFilters] = useState<HistoryQuery>({});
   const [loading, setLoading] = useState(true);
+  const [expandedDates, setExpandedDates] = useState<Set<string>>(() => new Set());
 
   async function reload(next = filters) {
     setLoading(true);
@@ -121,14 +123,6 @@ export default function HistoryPage() {
                   <div className="daily-price-row" key={product.normalized_product}>
                     <div className="daily-price-product">
                       <strong>{product.product}</strong>
-                      <span className="muted">
-                        {product.source_count === 1
-                          ? "مصدر واحد"
-                          : product.source_count + " مصادر"}
-                        {product.excluded_outlier_count > 0
-                          ? " · استُبعدت " + product.excluded_outlier_count + " قيمة شاذة من النطاق"
-                          : ""}
-                      </span>
                     </div>
                     <div className="daily-price-value">
                       {product.price_min === product.price_max
@@ -139,6 +133,69 @@ export default function HistoryPage() {
                   </div>
                 ))}
               </div>
+
+              <button
+                type="button"
+                className="daily-price-details-toggle button-reset"
+                aria-expanded={expandedDates.has(dailyPost.date)}
+                onClick={() =>
+                  setExpandedDates((current) => {
+                    const next = new Set(current);
+                    if (next.has(dailyPost.date)) {
+                      next.delete(dailyPost.date);
+                    } else {
+                      next.add(dailyPost.date);
+                    }
+                    return next;
+                  })
+                }
+              >
+                {expandedDates.has(dailyPost.date)
+                  ? "إخفاء التفاصيل"
+                  : "عرض التفاصيل والمصادر"}
+              </button>
+
+              {expandedDates.has(dailyPost.date) ? (
+                <div className="daily-price-details">
+                  {dailyPost.products.map((product) => (
+                    <section className="daily-product-details" key={product.normalized_product}>
+                      <div className="daily-product-details-head">
+                        <strong>{product.product}</strong>
+                        <span className="muted">
+                          {product.source_count === 1
+                            ? "مصدر واحد"
+                            : product.source_count === 2
+                              ? "مصدران"
+                              : product.source_count + " مصادر"}
+                          {product.excluded_outlier_count > 0
+                            ? " · استُبعدت " + product.excluded_outlier_count + " قيمة شاذة من النطاق"
+                            : ""}
+                        </span>
+                      </div>
+                      <div className="daily-source-list">
+                        {product.records.map((record) => {
+                          const sourceUrl = safeExternalHttpUrl(record.post_url);
+                          return (
+                            <div className="daily-source-item" key={record.id}>
+                              <span>{record.source_page}</span>
+                              {sourceUrl ? (
+                                <a
+                                  className="source-link"
+                                  href={sourceUrl}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                >
+                                  المصدر
+                                </a>
+                              ) : null}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </section>
+                  ))}
+                </div>
+              ) : null}
             </article>
           ))}
         </div>
