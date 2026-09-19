@@ -290,7 +290,12 @@ export async function runManualRefresh(
           signal: options.signal,
         });
         for (const parsed of ai) {
-          const candidate = await candidateFromParsed(options.db, post, parsed, visionImages.length ? "image_ai" : "post_text", visionImages[0]?.imageUrl);
+          const evidenceImageUrl = visionImages.length === 1
+            ? visionImages[0]?.imageUrl
+            : typeof parsed.image_index === "number"
+              ? visionImages[parsed.image_index]?.imageUrl
+              : undefined;
+          const candidate = await candidateFromParsed(options.db, post, parsed, visionImages.length ? "image_ai" : "post_text", evidenceImageUrl);
           candidate.ai_assisted = true;
           candidates.push(candidate);
         }
