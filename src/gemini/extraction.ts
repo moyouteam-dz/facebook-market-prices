@@ -1,4 +1,4 @@
-import { selectGeminiGenerateContentModel } from "./modelSelection";
+import { listGeminiGenerateContentModels } from "./modelSelection";
 export interface GeminiEvidence {
   postText: string;
   ocrText: string;
@@ -47,38 +47,45 @@ export async function extractPricesWithGemini(
   const images = evidence.images ?? [];
   if (!rawText && images.length === 0) return [];
 
-  const model = await selectGeminiGenerateContentModel(key, fetchImpl);
-  const response = await fetchImpl(
-    "https://generativelanguage.googleapis.com/v1beta/models/" + model + ":generateContent",
-    {
-      method: "POST",
-      signal: evidence.signal,
-      headers: { "Content-Type": "application/json", "x-goog-api-key": key },
-      body: JSON.stringify({
-        contents: [{ role: "user", parts: [
-          { text: "حلل النص والصور المرفقة. استخرج فقط أسعار المنتجات الظاهرة فعليًا بالدينار الجزائري. إذا كانت الصورة لا تحتوي أسعارًا واضحة فلا تستخرج منها شيئًا. لا تخمن ولا تستنتج سعرًا غير ظاهر. أعد JSON فقط.\n" + rawText },
-          ...images.map((image) => ({ inlineData: { mimeType: image.mimeType, data: image.base64 } })),
-        ] }],
-        generationConfig: {
-          responseMimeType: "application/json",
-          responseSchema: {
-            type: "ARRAY",
-            items: {
-              type: "OBJECT",
-              properties: {
-                product: { type: "STRING" },
-                price_min: { type: "NUMBER" },
-                price_max: { type: "NUMBER" },
-                currency: { type: "STRING", enum: ["DZD"] },
+  const models = await listGeminiGenerateContentModels(key, fetchImpl);
+  if (!models.length) throw new Error("gemini_no_generate_model");
+
+  let response: Response | null = null;
+  for (const model of models) {
+    response = await fetchImpl(
+      "https://generativelanguage.googleapis.com/v1beta/models/" + model + ":generateContent",
+      {
+        method: "POST",
+        signal: evidence.signal,
+        headers: { "Content-Type": "application/json", "x-goog-api-key": key },
+        body: JSON.stringify({
+          contents: [{ role: "user", parts: [
+            { text: "حلل النص والصور المرفقة. استخرج فقط أسعار المنتجات الظاهرة فعليًا بالدينار الجزائري. إذا كانت الصورة لا تحتوي أسعارًا واضحة فلا تستخرج منها شيئًا. لا تخمن ولا تستنتج سعرًا غير ظاهر. أعد JSON فقط.\n" + rawText },
+            ...images.map((image) => ({ inlineData: { mimeType: image.mimeType, data: image.base64 } })),
+          ] }],
+          generationConfig: {
+            responseMimeType: "application/json",
+            responseSchema: {
+              type: "ARRAY",
+              items: {
+                type: "OBJECT",
+                properties: {
+                  product: { type: "STRING" },
+                  price_min: { type: "NUMBER" },
+                  price_max: { type: "NUMBER" },
+                  currency: { type: "STRING", enum: ["DZD"] },
+                },
+                required: ["product", "price_min", "price_max", "currency"],
               },
-              required: ["product", "price_min", "price_max", "currency"],
             },
           },
-        },
-      }),
-    },
-  );
-  if (!response.ok) throw new Error("gemini_http_" + response.status);
+        }),
+      },
+    );
+    if (response.ok) break;
+    if (response.status !== 429) throw new Error("gemini_http_" + response.status);
+  }
+  if (!response?.ok) throw new Error("gemini_http_" + (response?.status ?? 429));
   const payload = await response.json() as { candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }> };
   const text = payload.candidates?.[0]?.content?.parts?.[0]?.text;
   if (!text) return [];
