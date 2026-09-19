@@ -72,7 +72,7 @@ function confidenceFor(rawProduct: string, product: string): Confidence {
 const PRICE_PATTERN =
   /^(.*?)\s*[:：]?\s*(\d+(?:[.,]\d+)?)\s*(?:-\s*(\d+(?:[.,]\d+)?))?\s*(?:دج|د\.?\s*j|دينار(?:\s+جزائري)?)(?:\s|$)/iu;
 const PRICE_WITHOUT_CURRENCY_PATTERN =
-  /^(.*?)\s*[:：]?\s*(\d+(?:[.,]\d+)?)\s*(?:-\s*(\d+(?:[.,]\d+)?))?\s*$/u;
+  /^(.*?)\s*[:：]?\s*(\d+(?:[.,]\d+)?)\s*-\s*(\d+(?:[.,]\d+)?)\s*$/u;
 const PRICE_ONLY_PATTERN =
   /^(\d+(?:[.,]\d+)?)\s*(?:-\s*(\d+(?:[.,]\d+)?))?\s*(?:دج|د\.?\s*j|دينار(?:\s+جزائري)?)(?:\s|$)/iu;
 
