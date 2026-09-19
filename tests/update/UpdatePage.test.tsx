@@ -106,4 +106,30 @@ describe("manual update page", () => {
     await userEvent.click(screen.getByRole("button", { name: "بدء التحديث" }));
     expect(await screen.findByText("أدخل مفتاح Apify أولًا من الإعدادات.")).toBeInTheDocument();
   });
+  it("shows friendly Arabic diagnostics instead of internal error codes when no prices are found", async () => {
+    const db = dbWithConfig();
+    await db.secret_settings.put({ key: "apify_token", value: "apify_api_test" });
+    await db.sources.add({
+      id: "source-1", name: "سوق الشلف", market: "الشلف",
+      facebook_url: "https://www.facebook.com/Emagfel", enabled: true,
+      created_at: "2026-09-18T00:00:00.000Z", updated_at: "2026-09-18T00:00:00.000Z",
+    });
+    const collectPosts = vi.fn().mockResolvedValue([{
+      post_id:"post-1", source_id:"source-1", source_page:"Emagfel", market:"الشلف",
+      post_url:"https://facebook.com/post-1", post_date:"2026-09-18T05:00:00.000Z",
+      text:"لا توجد أسعار", image_urls:["https://example.test/a.jpg"], unavailable:false,
+    }]);
+    render(
+      <MemoryRouter><ReviewSessionProvider>
+        <UpdatePage database={db} collectPosts={collectPosts}
+          createOcrEngine={() => ({ recognize: vi.fn().mockRejectedValue(new Error("ocr_init_failed")) })}
+          collectPosts={collectPosts} />
+      </ReviewSessionProvider></MemoryRouter>,
+    );
+    await screen.findByText("سوق الشلف");
+    await userEvent.click(screen.getByRole("button", { name: "بدء التحديث" }));
+    const message = await screen.findByText(/لم يتم العثور على أسعار/);
+    expect(message).toHaveTextContent("تعذر تشغيل قارئ الصور: 1");
+    expect(message).not.toHaveTextContent("ocr_init_failed");
+  });
 });
