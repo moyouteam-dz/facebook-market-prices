@@ -9,8 +9,6 @@ import { normalizeCollectedFacebookItems } from "../apify/normalizeCollectedItem
 import { getApifyToken, getGeminiApiKey } from "../db/secrets";
 import { getGeminiFallbackEnabled } from "../gemini/settings";
 import { extractPricesWithGemini } from "../gemini/extraction";
-import { createArabicTesseractOcrEngine } from "../ocr/tesseractOcrEngine";
-import type { OcrEngine } from "../ocr/types";
 import {
   runManualRefresh,
   type RefreshProgressEvent,
@@ -28,7 +26,6 @@ type Collector = (
 interface UpdatePageProps {
   database?: AppDatabase;
   collectPosts?: Collector;
-  createOcrEngine?: () => OcrEngine;
   setReviewSession?: (session: ReviewSession) => void;
   navigate?: (path: string) => void;
 }
@@ -67,7 +64,6 @@ function progressLabel(progress: RefreshProgressEvent | null) {
 export default function UpdatePage({
   database = defaultDb,
   collectPosts = defaultCollector,
-  createOcrEngine = createArabicTesseractOcrEngine,
   setReviewSession,
   navigate,
 }: UpdatePageProps) {
@@ -126,7 +122,6 @@ export default function UpdatePage({
     const geminiEnabled = await getGeminiFallbackEnabled(database);
     const geminiKey = geminiEnabled ? await getGeminiApiKey(database) : null;
     const abortController = new AbortController();
-    const ocrEngine = createOcrEngine();
     setController(abortController);
     setRunning(true);
     try {
@@ -136,7 +131,6 @@ export default function UpdatePage({
         sources: selectedSources,
         collectPosts,
         fetchImage,
-        ocrEngine,
         signal: abortController.signal,
         onProgress: setProgress,
         gemini: { enabled: geminiEnabled, apiKey: geminiKey, extract: (key, evidence) => extractPricesWithGemini(key, evidence) },
@@ -167,7 +161,6 @@ export default function UpdatePage({
         setMessage("تعذر إكمال التحديث. تحقق من الاتصال وإعدادات Apify ثم أعد المحاولة.");
       }
     } finally {
-      await ocrEngine.dispose?.();
       setRunning(false);
       setController(null);
     }
