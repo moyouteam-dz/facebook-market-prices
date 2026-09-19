@@ -223,7 +223,7 @@ export default function SettingsPage() {
       serializeBackup(backup),
       "application/json;charset=utf-8",
     );
-    setDataMessage("تم إنشاء النسخة الاحتياطية بدون مفتاح Apify.");
+    setDataMessage("تم إنشاء النسخة الاحتياطية بدون مفاتيح Apify أو Gemini.");
   }
 
   async function handleCsv() {
