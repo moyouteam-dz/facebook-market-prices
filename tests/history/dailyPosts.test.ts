@@ -68,4 +68,36 @@ describe("daily price posts", () => {
     expect(groups[0].products[0].records).toHaveLength(2);
   });
 
+
+  it("keeps raw records but excludes an extreme outlier from the displayed daily range when there is enough evidence", () => {
+    const groups = groupPriceHistoryByDay([
+      record({ id: "a", product: "بطاطا", normalized_product: "بطاطا", price_min: 70, price_max: 70, source_id: "s1" }),
+      record({ id: "b", product: "بطاطا", normalized_product: "بطاطا", price_min: 80, price_max: 80, source_id: "s2" }),
+      record({ id: "c", product: "بطاطا", normalized_product: "بطاطا", price_min: 90, price_max: 90, source_id: "s3" }),
+      record({ id: "d", product: "بطاطا", normalized_product: "بطاطا", price_min: 900, price_max: 900, source_id: "s4" }),
+    ]);
+
+    const potato = groups[0].products[0];
+    expect(potato).toEqual(expect.objectContaining({
+      price_min: 70,
+      price_max: 90,
+      source_count: 4,
+      excluded_outlier_count: 1,
+    }));
+    expect(potato.records).toHaveLength(4);
+  });
+
+  it("does not filter a wide range when there are fewer than three observations", () => {
+    const groups = groupPriceHistoryByDay([
+      record({ id: "a", product: "فلفل", normalized_product: "فلفل", price_min: 100, price_max: 100, source_id: "s1" }),
+      record({ id: "b", product: "فلفل", normalized_product: "فلفل", price_min: 300, price_max: 300, source_id: "s2" }),
+    ]);
+
+    expect(groups[0].products[0]).toEqual(expect.objectContaining({
+      price_min: 100,
+      price_max: 300,
+      excluded_outlier_count: 0,
+    }));
+  });
+
 });
