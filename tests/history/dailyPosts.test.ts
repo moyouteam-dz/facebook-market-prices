@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { PriceHistoryRecord } from "../../src/db/database";
-import { groupPriceHistoryByDay } from "../../src/history/dailyPosts";
+import { formatDailyPricePostForPublishing, groupPriceHistoryByDay } from "../../src/history/dailyPosts";
 
 function record(overrides: Partial<PriceHistoryRecord>): PriceHistoryRecord {
   return {
@@ -117,4 +117,19 @@ describe("daily price posts", () => {
     ]);
   });
 
+
+  it("formats one concise publish-ready text block for the whole day", () => {
+    const [daily] = groupPriceHistoryByDay([
+      record({ id: "a", product: "بطاطا", normalized_product: "بطاطا", price_min: 70, price_max: 90, source_id: "s1" }),
+      record({ id: "b", product: "بصل", normalized_product: "بصل", price_min: 40, price_max: 40, source_id: "s2" }),
+    ]);
+
+    const text = formatDailyPricePostForPublishing(daily);
+
+    expect(text).toContain("أسعار اليوم");
+    expect(text).toContain("بطاطا: 70–90 دج");
+    expect(text).toContain("بصل: 40 دج");
+    expect(text).not.toContain("مصدر");
+    expect(text).not.toContain("http");
+  });
 });

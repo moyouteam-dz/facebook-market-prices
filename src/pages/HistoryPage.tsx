@@ -4,7 +4,7 @@ import {
   queryPriceHistory,
   type HistoryQuery,
 } from "../history/historyExport";
-import { groupPriceHistoryByDay } from "../history/dailyPosts";
+import { formatDailyPricePostForPublishing, groupPriceHistoryByDay } from "../history/dailyPosts";
 import { safeExternalHttpUrl } from "../security/externalUrl";
 
 export default function HistoryPage() {
@@ -12,6 +12,7 @@ export default function HistoryPage() {
   const [filters, setFilters] = useState<HistoryQuery>({});
   const [loading, setLoading] = useState(true);
   const [expandedDates, setExpandedDates] = useState<Set<string>>(() => new Set());
+  const [copiedDate, setCopiedDate] = useState<string | null>(null);
 
   async function reload(next = filters) {
     setLoading(true);
@@ -134,6 +135,20 @@ export default function HistoryPage() {
                 ))}
               </div>
 
+              <div className="daily-price-actions">
+                <button
+                  type="button"
+                  className="daily-price-copy button-reset"
+                  onClick={async () => {
+                    await navigator.clipboard.writeText(
+                      formatDailyPricePostForPublishing(dailyPost),
+                    );
+                    setCopiedDate(dailyPost.date);
+                  }}
+                >
+                  {copiedDate === dailyPost.date ? "تم النسخ" : "نسخ المنشور"}
+                </button>
+
               <button
                 type="button"
                 className="daily-price-details-toggle button-reset"
@@ -154,6 +169,8 @@ export default function HistoryPage() {
                   ? "إخفاء التفاصيل"
                   : "عرض التفاصيل والمصادر"}
               </button>
+
+              </div>
 
               {expandedDates.has(dailyPost.date) ? (
                 <div className="daily-price-details">
