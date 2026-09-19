@@ -71,7 +71,7 @@ export interface ManualRefreshOptions {
   gemini?: {
     enabled: boolean;
     apiKey: string | null;
-    extract: (apiKey: string, evidence: { postText: string; ocrText: string; signal?: AbortSignal }) => Promise<GeminiPriceCandidate[]>;
+    extract: (apiKey: string, evidence: { postText: string; ocrText: string; images?: Array<{ mimeType: string; base64: string }>; signal?: AbortSignal }) => Promise<GeminiPriceCandidate[]>;
   };
 }
 
@@ -154,6 +154,7 @@ export async function runManualRefresh(
   const candidates: ReviewCandidate[] = [];
   const deterministicByPost = new Map<string, ReturnType<typeof parsePriceCandidates>>();
   const ocrTextByPost = new Map<string, string[]>();
+  const aiImagesByPost = new Map<string, Array<{ mimeType: string; base64: string; imageUrl: string }>>();
   let posts: NormalizedFacebookPost[] = [];
   let imagesProcessed = 0;
   let geminiAttempted = 0;
@@ -246,57 +247,35 @@ export async function runManualRefresh(
   for (const job of imageJobs) {
     try {
       throwIfAborted(options.signal);
-    } catch (error) {
-      await options.db.runs.update(runId, {
-        finished_at: new Date().toISOString(),
-        posts_received: posts.length,
-        images_processed: imagesProcessed,
-        candidates_found: deduplicateReviewCandidates(candidates).length,
-        errors: [...errors, "refresh_cancelled"],
-      });
-      throw error;
-    }
-
-    try {
       const blob = await options.fetchImage(job.imageUrl, options.signal);
       throwIfAborted(options.signal);
-      const ocr = await options.ocrEngine.recognize(blob);
       imagesProcessed += 1;
-      ocrTextByPost.set(job.post.post_id, [...(ocrTextByPost.get(job.post.post_id) ?? []), ocr.text].filter(Boolean));
-      const ocrParsed = parseOcrPriceCandidates(ocr.text);
-      deterministicByPost.set(job.post.post_id, [...(deterministicByPost.get(job.post.post_id) ?? []), ...ocrParsed]);
 
-      for (const parsed of ocrParsed) {
-        candidates.push(
-          await candidateFromParsed(
-            options.db,
-            job.post,
-            parsed,
-            "image_ocr",
-            job.imageUrl,
-          ),
-        );
+      if (options.gemini?.enabled && options.gemini.apiKey) {
+        const bytes = new Uint8Array(await blob.arrayBuffer());
+        let binary = "";
+        for (const byte of bytes) binary += String.fromCharCode(byte);
+        aiImagesByPost.set(job.post.post_id, [
+          ...(aiImagesByPost.get(job.post.post_id) ?? []),
+          { mimeType: blob.type || "image/jpeg", base64: btoa(binary), imageUrl: job.imageUrl },
+        ]);
+      } else {
+        const ocr = await options.ocrEngine.recognize(blob);
+        ocrTextByPost.set(job.post.post_id, [...(ocrTextByPost.get(job.post.post_id) ?? []), ocr.text].filter(Boolean));
+        const ocrParsed = parseOcrPriceCandidates(ocr.text);
+        deterministicByPost.set(job.post.post_id, [...(deterministicByPost.get(job.post.post_id) ?? []), ...ocrParsed]);
+        for (const parsed of ocrParsed) candidates.push(await candidateFromParsed(options.db, job.post, parsed, "image_ocr", job.imageUrl));
       }
     } catch (error) {
-      if (options.signal?.aborted) {
-        throw error;
-      }
-
+      if (options.signal?.aborted) throw error;
       const reason = error instanceof Error ? error.message : "image_ocr_failed";
       const category = error instanceof TypeError && /fetch/i.test(reason)
         ? "image_fetch_network"
-        : reason === "image_download_failed"
-          ? "image_http_failed"
-          : classifyOcrError(error);
+        : reason === "image_download_failed" ? "image_http_failed" : classifyOcrError(error);
       increment(imageFailureCategories, category);
       errors.push(category);
     }
-
-    options.onProgress?.({
-      stage: "ocr",
-      completed: imagesProcessed + errors.length,
-      total: imageJobs.length,
-    });
+    options.onProgress?.({ stage: "ocr", completed: imagesProcessed + errors.length, total: imageJobs.length });
   }
 
   if (options.gemini?.enabled && options.gemini.apiKey) {
@@ -306,9 +285,15 @@ export async function runManualRefresh(
       if (!shouldUseGemini(deterministic, true, true)) continue;
       geminiAttempted += 1;
       try {
-        const ai = await options.gemini.extract(options.gemini.apiKey, { postText: post.text, ocrText: (ocrTextByPost.get(post.post_id) ?? []).join("\n"), signal: options.signal });
+        const visionImages = aiImagesByPost.get(post.post_id) ?? [];
+        const ai = await options.gemini.extract(options.gemini.apiKey, {
+          postText: post.text,
+          ocrText: (ocrTextByPost.get(post.post_id) ?? []).join("\n"),
+          images: visionImages.map(({ mimeType, base64 }) => ({ mimeType, base64 })),
+          signal: options.signal,
+        });
         for (const parsed of ai) {
-          const candidate = await candidateFromParsed(options.db, post, parsed, post.image_urls.length ? "image_ocr" : "post_text");
+          const candidate = await candidateFromParsed(options.db, post, parsed, post.image_urls.length ? "image_ocr" : "post_text", visionImages[0]?.imageUrl);
           candidate.ai_assisted = true;
           candidates.push(candidate);
         }
