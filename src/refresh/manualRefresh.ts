@@ -1,12 +1,9 @@
-import { parseOcrPriceCandidates } from "../parser/ocrPriceParser";
-import { classifyOcrError } from "../ocr/ocrError";
 import { shouldUseGemini } from "../gemini/fallbackPolicy";
 import type { GeminiPriceCandidate } from "../gemini/extraction";
 import { applyProductAlias } from "../aliases/productAliases";
 import type { NormalizedFacebookPost } from "../apify/apifyAdapter";
 import type { AppDatabase } from "../db/database";
 import { buildObservationFingerprint } from "../history/observations";
-import type { OcrEngine } from "../ocr/types";
 import {
   parsePriceCandidates,
   type Confidence,
@@ -41,7 +38,7 @@ export interface ReviewCandidate {
   post_id: string;
   post_url: string;
   post_date: string;
-  source_type: "post_text" | "image_ocr";
+  source_type: "post_text" | "image_ai";
   raw_text: string;
   image_url?: string;
   confidence: Confidence;
@@ -65,7 +62,6 @@ export interface ManualRefreshOptions {
     signal?: AbortSignal,
   ) => Promise<NormalizedFacebookPost[]>;
   fetchImage: (url: string, signal?: AbortSignal) => Promise<Blob>;
-  ocrEngine: OcrEngine;
   signal?: AbortSignal;
   onProgress?: (event: RefreshProgressEvent) => void;
   gemini?: {
@@ -102,7 +98,7 @@ async function candidateFromParsed(
   db: AppDatabase,
   post: NormalizedFacebookPost,
   parsed: ReturnType<typeof parsePriceCandidates>[number],
-  sourceType: "post_text" | "image_ocr",
+  sourceType: "post_text" | "image_ai",
   imageUrl?: string,
 ): Promise<ReviewCandidate> {
   const canonical = await applyProductAlias(db, parsed.normalized_product);
@@ -163,7 +159,6 @@ export async function runManualRefresh(
   const errors: string[] = [];
   const candidates: ReviewCandidate[] = [];
   const deterministicByPost = new Map<string, ReturnType<typeof parsePriceCandidates>>();
-  const ocrTextByPost = new Map<string, string[]>();
   const aiImagesByPost = new Map<string, Array<{ mimeType: string; base64: string; imageUrl: string }>>();
   let posts: NormalizedFacebookPost[] = [];
   let imagesProcessed = 0;
@@ -267,19 +262,13 @@ export async function runManualRefresh(
           ...(aiImagesByPost.get(job.post.post_id) ?? []),
           { mimeType: blob.type || "image/jpeg", base64, imageUrl: job.imageUrl },
         ]);
-      } else {
-        const ocr = await options.ocrEngine.recognize(blob);
-        ocrTextByPost.set(job.post.post_id, [...(ocrTextByPost.get(job.post.post_id) ?? []), ocr.text].filter(Boolean));
-        const ocrParsed = parseOcrPriceCandidates(ocr.text);
-        deterministicByPost.set(job.post.post_id, [...(deterministicByPost.get(job.post.post_id) ?? []), ...ocrParsed]);
-        for (const parsed of ocrParsed) candidates.push(await candidateFromParsed(options.db, job.post, parsed, "image_ocr", job.imageUrl));
       }
     } catch (error) {
       if (options.signal?.aborted) throw error;
-      const reason = error instanceof Error ? error.message : "image_ocr_failed";
+      const reason = error instanceof Error ? error.message : "image_processing_failed";
       const category = error instanceof TypeError && /fetch/i.test(reason)
         ? "image_fetch_network"
-        : reason === "image_download_failed" ? "image_http_failed" : classifyOcrError(error);
+        : reason === "image_download_failed" ? "image_http_failed" : "image_processing_failed";
       increment(imageFailureCategories, category);
       errors.push(category);
     }
@@ -296,12 +285,12 @@ export async function runManualRefresh(
         const visionImages = aiImagesByPost.get(post.post_id) ?? [];
         const ai = await options.gemini.extract(options.gemini.apiKey, {
           postText: post.text,
-          ocrText: (ocrTextByPost.get(post.post_id) ?? []).join("\n"),
+          ocrText: "",
           images: visionImages.map(({ mimeType, base64 }) => ({ mimeType, base64 })),
           signal: options.signal,
         });
         for (const parsed of ai) {
-          const candidate = await candidateFromParsed(options.db, post, parsed, post.image_urls.length ? "image_ocr" : "post_text", visionImages[0]?.imageUrl);
+          const candidate = await candidateFromParsed(options.db, post, parsed, visionImages.length ? "image_ai" : "post_text", visionImages[0]?.imageUrl);
           candidate.ai_assisted = true;
           candidates.push(candidate);
         }
