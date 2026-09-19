@@ -13,7 +13,6 @@ describe("live refresh diagnostics", () => {
       db,token:"apify-secret",sources:[source],
       collectPosts:vi.fn().mockResolvedValue([{post_id:"p",source_id:"s",source_page:"سوق",market:"الحطاطبة",post_url:"https://facebook.com/p",post_date:"2026-09-18T00:00:00Z",text:"لا يوجد سعر",image_urls:["https://cdn.example.test/private?sig=abc"],unavailable:false}]),
       fetchImage:vi.fn().mockRejectedValue(new TypeError("Failed to fetch")),
-      ocrEngine:{recognize:vi.fn()},
       gemini:{enabled:true,apiKey:"gemini-secret",extract:vi.fn().mockRejectedValue(new Error("gemini_http_429"))},
     });
     expect(result.diagnostics).toEqual(expect.objectContaining({
