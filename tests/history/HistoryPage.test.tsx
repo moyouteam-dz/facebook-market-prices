@@ -34,6 +34,24 @@ const base = {
 };
 
 describe("HistoryPage daily posts", () => {
+  it("offers one copy action for the publish-ready daily post", async () => {
+    mocks.queryPriceHistory.mockResolvedValueOnce([base]);
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    Object.defineProperty(navigator, "clipboard", {
+      configurable: true,
+      value: { writeText },
+    });
+
+    render(<HistoryPage />);
+
+    await screen.findByText("بطاطا");
+    await userEvent.click(screen.getByRole("button", { name: "نسخ المنشور" }));
+
+    expect(writeText).toHaveBeenCalledTimes(1);
+    expect(writeText.mock.calls[0]?.[0]).toContain("بطاطا: 70–90 دج");
+    expect(screen.getByText("تم النسخ")).toBeInTheDocument();
+  });
+
   it("keeps the daily post compact by default and reveals source details on demand", async () => {
     mocks.queryPriceHistory.mockResolvedValueOnce([
       base,
