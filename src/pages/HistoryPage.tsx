@@ -5,6 +5,7 @@ import {
   queryPriceHistory,
   type HistoryQuery,
 } from "../history/historyExport";
+import { groupPriceHistoryByDay } from "../history/dailyPosts";
 
 export default function HistoryPage() {
   const [records, setRecords] = useState<PriceHistoryRecord[]>([]);
@@ -101,34 +102,49 @@ export default function HistoryPage() {
         </div>
       ) : (
         <div className="history-list">
-          {records.map((record) => (
-            <article className="panel price-card" key={record.id}>
-              <div className="price-card-head">
+          {groupPriceHistoryByDay(records).map((dailyPost) => (
+            <article className="panel daily-price-post" key={dailyPost.date}>
+              <div className="daily-price-post-head">
                 <div>
-                  <strong>{record.product}</strong>
-                  <p className="muted source-meta">
-                    {record.market} · {record.source_page}
-                  </p>
+                  <p className="eyebrow">منشور الأسعار اليومي</p>
+                  <h2>{new Date(dailyPost.date + "T12:00:00").toLocaleDateString("ar-DZ", {
+                    weekday: "long",
+                    year: "numeric",
+                    month: "long",
+                    day: "numeric",
+                  })}</h2>
                 </div>
-                <div className="price-value">
-                  {record.price_min === record.price_max
-                    ? record.price_min
-                    : record.price_min + " – " + record.price_max}
-                  <small> دج</small>
-                </div>
+                <span className="daily-price-count">{dailyPost.records.length} سعر</span>
               </div>
-              <div className="price-card-foot">
-                <span>
-                  {new Date(record.post_date).toLocaleDateString("ar-DZ")}
-                </span>
-                {safeExternalHttpUrl(record.post_url) ? (<a
-                  className="source-link"
-                  href={safeExternalHttpUrl(record.post_url) ?? undefined}
-                  target="_blank"
-                  rel="noreferrer"
-                >
-                  المصدر
-                </a>) : <span className="muted">لا يوجد رابط آمن</span>}
+
+              <div className="daily-price-list">
+                {dailyPost.records.map((record) => (
+                  <div className="daily-price-row" key={record.id}>
+                    <div className="daily-price-product">
+                      <strong>{record.product}</strong>
+                      <span className="muted">{record.market}</span>
+                    </div>
+                    <div className="daily-price-value">
+                      {record.price_min === record.price_max
+                        ? record.price_min
+                        : record.price_min + " – " + record.price_max}
+                      <small> دج</small>
+                    </div>
+                    <div className="daily-price-source">
+                      <span className="muted">{record.source_page}</span>
+                      {safeExternalHttpUrl(record.post_url) ? (
+                        <a
+                          className="source-link"
+                          href={safeExternalHttpUrl(record.post_url) ?? undefined}
+                          target="_blank"
+                          rel="noreferrer"
+                        >
+                          المصدر
+                        </a>
+                      ) : null}
+                    </div>
+                  </div>
+                ))}
               </div>
             </article>
           ))}
