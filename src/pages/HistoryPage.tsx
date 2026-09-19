@@ -125,6 +125,9 @@ export default function HistoryPage() {
                         {product.source_count === 1
                           ? "مصدر واحد"
                           : product.source_count + " مصادر"}
+                        {product.excluded_outlier_count > 0
+                          ? " · استُبعدت " + product.excluded_outlier_count + " قيمة شاذة من النطاق"
+                          : ""}
                       </span>
                     </div>
                     <div className="daily-price-value">
