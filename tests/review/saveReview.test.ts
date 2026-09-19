@@ -94,4 +94,21 @@ describe("review save gate", () => {
 
     expect(await db.price_history.count()).toBe(1);
   });
+
+  it("applies remembered aliases across harmless writing variations", async () => {
+    await saveReviewedCandidates(db, "run-1", [base]);
+
+    expect(await applyProductAlias(db, "  بَطاط  ")).toBe("بطاطا");
+
+    await db.product_aliases.put({
+      id: crypto.randomUUID(),
+      observed_name: "Pomme de terre",
+      canonical_name: "بطاطا",
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    });
+
+    expect(await applyProductAlias(db, "pomme   DE TERRE")).toBe("بطاطا");
+  });
+
 });
