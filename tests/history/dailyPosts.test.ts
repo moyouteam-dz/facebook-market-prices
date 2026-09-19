@@ -53,8 +53,8 @@ describe("daily price posts", () => {
 
   it("summarizes repeated products into one daily line with the full observed price range", () => {
     const groups = groupPriceHistoryByDay([
-      record({ id: "a", product: "بطاطا", normalized_product: "بطاطا", price_min: 70, price_max: 80, source_page: "المصدر أ" }),
-      record({ id: "b", product: "بطاطا", normalized_product: "بطاطا", price_min: 75, price_max: 90, source_page: "المصدر ب" }),
+      record({ id: "a", product: "بطاطا", normalized_product: "بطاطا", price_min: 70, price_max: 80, source_id: "s1", source_page: "المصدر أ" }),
+      record({ id: "b", product: "بطاطا", normalized_product: "بطاطا", price_min: 75, price_max: 90, source_id: "s2", source_page: "المصدر ب" }),
       record({ id: "c", product: "بصل", normalized_product: "بصل", price_min: 35, price_max: 40, source_page: "المصدر ج" }),
     ]);
 
