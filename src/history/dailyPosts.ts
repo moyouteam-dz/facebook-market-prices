@@ -6,6 +6,7 @@ export interface DailyProductSummary {
   price_min: number;
   price_max: number;
   source_count: number;
+  excluded_outlier_count: number;
   records: PriceHistoryRecord[];
 }
 
@@ -17,6 +18,50 @@ export interface DailyPricePost {
 
 function dayKey(isoDate: string): string {
   return isoDate.slice(0, 10);
+}
+
+function median(values: number[]): number {
+  const sorted = [...values].sort((a, b) => a - b);
+  const middle = Math.floor(sorted.length / 2);
+  return sorted.length % 2 === 0
+    ? ((sorted[middle - 1] ?? 0) + (sorted[middle] ?? 0)) / 2
+    : (sorted[middle] ?? 0);
+}
+
+function displayRange(records: PriceHistoryRecord[]): {
+  price_min: number;
+  price_max: number;
+  excluded_outlier_count: number;
+} {
+  const allMin = Math.min(...records.map((record) => record.price_min));
+  const allMax = Math.max(...records.map((record) => record.price_max));
+
+  if (records.length < 3) {
+    return { price_min: allMin, price_max: allMax, excluded_outlier_count: 0 };
+  }
+
+  const centers = records.map((record) => (record.price_min + record.price_max) / 2);
+  const centerMedian = median(centers);
+  if (!Number.isFinite(centerMedian) || centerMedian <= 0) {
+    return { price_min: allMin, price_max: allMax, excluded_outlier_count: 0 };
+  }
+
+  const lowerBound = centerMedian / 3;
+  const upperBound = centerMedian * 3;
+  const included = records.filter((record) => {
+    const center = (record.price_min + record.price_max) / 2;
+    return center >= lowerBound && center <= upperBound;
+  });
+
+  if (included.length < 2) {
+    return { price_min: allMin, price_max: allMax, excluded_outlier_count: 0 };
+  }
+
+  return {
+    price_min: Math.min(...included.map((record) => record.price_min)),
+    price_max: Math.max(...included.map((record) => record.price_max)),
+    excluded_outlier_count: records.length - included.length,
+  };
 }
 
 function summarizeProducts(records: PriceHistoryRecord[]): DailyProductSummary[] {
@@ -33,15 +78,18 @@ function summarizeProducts(records: PriceHistoryRecord[]): DailyProductSummary[]
         price_min: record.price_min,
         price_max: record.price_max,
         source_count: 1,
+        excluded_outlier_count: 0,
         records: [record],
       });
       continue;
     }
 
-    existing.price_min = Math.min(existing.price_min, record.price_min);
-    existing.price_max = Math.max(existing.price_max, record.price_max);
     existing.records.push(record);
     existing.source_count = new Set(existing.records.map((item) => item.source_id)).size;
+    const range = displayRange(existing.records);
+    existing.price_min = range.price_min;
+    existing.price_max = range.price_max;
+    existing.excluded_outlier_count = range.excluded_outlier_count;
   }
 
   return [...byProduct.values()];
