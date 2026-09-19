@@ -3,6 +3,7 @@ export interface GeminiEvidence {
   postText: string;
   ocrText: string;
   signal?: AbortSignal;
+  images?: Array<{ mimeType: string; base64: string }>;
 }
 
 export interface GeminiPriceCandidate {
@@ -43,7 +44,8 @@ export async function extractPricesWithGemini(
   const key = apiKey.trim();
   if (!key) throw new Error("missing_gemini_key");
   const rawText = [evidence.postText.trim(), evidence.ocrText.trim()].filter(Boolean).join("\n");
-  if (!rawText) return [];
+  const images = evidence.images ?? [];
+  if (!rawText && images.length === 0) return [];
 
   const model = await selectGeminiGenerateContentModel(key, fetchImpl);
   const response = await fetchImpl(
@@ -53,7 +55,10 @@ export async function extractPricesWithGemini(
       signal: evidence.signal,
       headers: { "Content-Type": "application/json", "x-goog-api-key": key },
       body: JSON.stringify({
-        contents: [{ role: "user", parts: [{ text: "استخرج فقط أسعار المنتجات بالدينار الجزائري من النص التالي. لا تخمن. أعد JSON فقط.\n" + rawText }] }],
+        contents: [{ role: "user", parts: [
+          { text: "حلل النص والصور المرفقة. استخرج فقط أسعار المنتجات الظاهرة فعليًا بالدينار الجزائري. إذا كانت الصورة لا تحتوي أسعارًا واضحة فلا تستخرج منها شيئًا. لا تخمن ولا تستنتج سعرًا غير ظاهر. أعد JSON فقط.\n" + rawText },
+          ...images.map((image) => ({ inlineData: { mimeType: image.mimeType, data: image.base64 } })),
+        ] }],
         generationConfig: {
           responseMimeType: "application/json",
           responseSchema: {
