@@ -306,3 +306,68 @@ p {
   min-width: 0;
   font-size: 0.86rem;
 }
+
+
+.daily-price-details-toggle {
+  width: 100%;
+  min-height: 44px;
+  border: 1px solid #ddd6ea;
+  border-radius: 12px;
+  background: #fff;
+  color: #5b21b6;
+  padding: 9px 12px;
+  font-weight: 700;
+}
+
+.daily-price-details {
+  display: grid;
+  gap: 12px;
+  border-top: 1px solid #eeeaf5;
+  padding-top: 4px;
+}
+
+.daily-product-details {
+  display: grid;
+  gap: 8px;
+  padding-top: 10px;
+}
+
+.daily-product-details + .daily-product-details {
+  border-top: 1px solid #eeeaf5;
+}
+
+.daily-product-details-head,
+.daily-source-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.daily-product-details-head {
+  align-items: flex-start;
+}
+
+.daily-source-list {
+  display: grid;
+  gap: 6px;
+}
+
+.daily-source-item {
+  min-width: 0;
+  border-radius: 10px;
+  background: #faf9fd;
+  padding: 8px 10px;
+  font-size: 0.88rem;
+}
+
+.daily-source-item > span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.daily-source-item .source-link {
+  flex: 0 0 auto;
+  color: #5b21b6;
+  font-weight: 700;
+}
