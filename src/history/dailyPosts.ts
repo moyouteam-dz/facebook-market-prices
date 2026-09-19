@@ -121,3 +121,25 @@ export function groupPriceHistoryByDay(records: PriceHistoryRecord[]): DailyPric
       };
     });
 }
+
+
+function formatPublishDate(date: string): string {
+  return new Date(date + "T12:00:00").toLocaleDateString("ar-DZ", {
+    weekday: "long",
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+  });
+}
+
+export function formatDailyPricePostForPublishing(dailyPost: DailyPricePost): string {
+  const lines = dailyPost.products.map((product) => {
+    const price =
+      product.price_min === product.price_max
+        ? String(product.price_min)
+        : product.price_min + "–" + product.price_max;
+    return product.product + ": " + price + " دج";
+  });
+
+  return ["أسعار اليوم — " + formatPublishDate(dailyPost.date), "", ...lines].join("\n");
+}
