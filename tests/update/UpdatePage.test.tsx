@@ -122,7 +122,8 @@ describe("manual update page", () => {
     render(
       <MemoryRouter><ReviewSessionProvider>
         <UpdatePage database={db} collectPosts={collectPosts}
-          createOcrEngine={() => ({ recognize: vi.fn().mockRejectedValue(new Error("ocr_init_failed")) })} />
+          createOcrEngine={() => ({ recognize: vi.fn().mockRejectedValue(new Error("ocr_init_failed")) })}
+          collectPosts={collectPosts} />
       </ReviewSessionProvider></MemoryRouter>,
     );
     await screen.findByText("سوق الشلف");
