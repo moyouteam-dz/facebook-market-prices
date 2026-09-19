@@ -16,7 +16,7 @@ export interface EditableReviewCandidate {
   post_id: string;
   post_url: string;
   post_date: string;
-  source_type: "post_text" | "image_ocr";
+  source_type: "post_text" | "image_ocr" | "image_ai";
   raw_text: string;
   image_url?: string;
   confidence: "high" | "medium" | "low";
