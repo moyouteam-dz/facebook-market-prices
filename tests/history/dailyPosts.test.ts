@@ -111,8 +111,8 @@ describe("daily price posts", () => {
     ]);
 
     expect(groups[0].products.map((item) => [item.product, item.source_count])).toEqual([
-      ["بطاطا", 2],
       ["بصل", 2],
+      ["بطاطا", 2],
       ["طماطم", 1],
     ]);
   });
