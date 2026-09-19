@@ -22,4 +22,18 @@ it("sends image bytes to Gemini Vision and asks it to return only real visible p
  ]));
  expect(String(fetcher.mock.calls[1]?.[1]?.body)).not.toContain("secret");
 });
+
+it("retries another eligible model when the first model is quota-limited",async()=>{
+ const fetcher=vi.fn()
+  .mockResolvedValueOnce(json({models:[
+    {name:"models/gemini-3.5-flash-lite",supportedGenerationMethods:["generateContent"]},
+    {name:"models/gemini-2.5-flash-lite",supportedGenerationMethods:["generateContent"]}
+  ]}))
+  .mockResolvedValueOnce(new Response(JSON.stringify({error:{code:429,status:"RESOURCE_EXHAUSTED"}}),{status:429,headers:{"Content-Type":"application/json"}}))
+  .mockResolvedValueOnce(json({candidates:[{content:{parts:[{text:JSON.stringify([{product:"طماطم",price_min:70,price_max:90,currency:"DZD"}])}]}}]}));
+ const result=await extractPricesWithGemini("secret",{postText:"",ocrText:"",images:[{mimeType:"image/jpeg",base64:"AQID"}]},fetcher);
+ expect(result[0]).toEqual(expect.objectContaining({product:"طماطم",price_min:70,price_max:90}));
+ expect(fetcher.mock.calls[1]?.[0]).toContain("gemini-3.5-flash-lite:generateContent");
+ expect(fetcher.mock.calls[2]?.[0]).toContain("gemini-2.5-flash-lite:generateContent");
+});
 });
