@@ -3,7 +3,6 @@ import type { GeminiPriceCandidate } from "../gemini/extraction";
 import { applyProductAlias } from "../aliases/productAliases";
 import type { NormalizedFacebookPost } from "../apify/apifyAdapter";
 import type { AppDatabase } from "../db/database";
-import { buildObservationFingerprint } from "../history/observations";
 import {
   parsePriceCandidates,
   type Confidence,
@@ -123,20 +122,36 @@ async function candidateFromParsed(
   };
 }
 
+function reviewDedupKey(candidate: ReviewCandidate): string {
+  return [
+    candidate.source_id.trim().toLocaleLowerCase("ar"),
+    candidate.post_id.trim().toLocaleLowerCase("ar"),
+    candidate.normalized_product.trim().toLocaleLowerCase("ar"),
+    String(candidate.price_min),
+    String(candidate.price_max),
+  ].join("|");
+}
+
+function candidateQuality(candidate: ReviewCandidate): number {
+  const confidenceScore = candidate.confidence === "high" ? 30 : candidate.confidence === "medium" ? 20 : 10;
+  const sourceScore = candidate.source_type === "image_ai" ? 2 : 1;
+  return confidenceScore + sourceScore;
+}
+
 function deduplicateReviewCandidates(
   candidates: ReviewCandidate[],
 ): ReviewCandidate[] {
-  const seen = new Set<string>();
-  const output: ReviewCandidate[] = [];
+  const bestByKey = new Map<string, ReviewCandidate>();
 
   for (const candidate of candidates) {
-    const fingerprint = buildObservationFingerprint(candidate);
-    if (seen.has(fingerprint)) continue;
-    seen.add(fingerprint);
-    output.push(candidate);
+    const key = reviewDedupKey(candidate);
+    const existing = bestByKey.get(key);
+    if (!existing || candidateQuality(candidate) > candidateQuality(existing)) {
+      bestByKey.set(key, candidate);
+    }
   }
 
-  return output;
+  return [...bestByKey.values()];
 }
 
 export async function runManualRefresh(
