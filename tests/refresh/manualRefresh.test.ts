@@ -182,4 +182,19 @@ describe("manual refresh orchestration", () => {
     expect(result.diagnostics.gemini_failed).toBe(1);
     expect(result.diagnostics.gemini_failure_categories).toEqual({ gemini_http_429: 1 });
   });
+  it("uses Gemini Vision for post images without running local OCR", async () => {
+    const extract = vi.fn().mockResolvedValue([{ product:"بصل", normalized_product:"بصل", price_min:35, price_max:40, currency:"DZD", confidence:"medium", raw_text:"بصل 35 40" }]);
+    const recognize = vi.fn();
+    const result = await runManualRefresh({
+      db, token:"token", sources:[source],
+      collectPosts: vi.fn().mockResolvedValue([{ post_id:"vision-1",source_id:"source-1",source_page:"سوق الجملة",market:"الشلف",post_url:"https://facebook.com/vision-1",post_date:"2026-09-18T00:00:00.000Z",text:"",image_urls:["https://example.test/prices.jpg"],unavailable:false }]),
+      fetchImage: vi.fn().mockResolvedValue(new Blob([new Uint8Array([1,2,3])],{type:"image/jpeg"})),
+      ocrEngine:{recognize},
+      gemini:{enabled:true,apiKey:"secret",extract},
+    });
+    expect(recognize).not.toHaveBeenCalled();
+    expect(extract).toHaveBeenCalledTimes(1);
+    expect(extract.mock.calls[0]?.[1]?.images).toEqual([{mimeType:"image/jpeg",base64:"AQID"}]);
+    expect(result.candidates[0]).toEqual(expect.objectContaining({product:"بصل",ai_assisted:true,image_url:"https://example.test/prices.jpg"}));
+  });
 });
