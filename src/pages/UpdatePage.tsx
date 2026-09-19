@@ -52,6 +52,22 @@ async function fetchImage(url: string, signal?: AbortSignal) {
   return response.blob();
 }
 
+const diagnosticLabels: Record<string, string> = {
+  image_fetch_network: "تعذر تنزيل الصورة",
+  image_http_failed: "رفض مصدر الصورة التنزيل",
+  ocr_init_failed: "تعذر تشغيل قارئ الصور",
+  ocr_predict_failed: "تعذرت قراءة الصورة",
+  gemini_http_429: "Gemini مشغول أو تجاوز الحصة",
+  gemini_request_failed: "تعذر الاتصال بـ Gemini",
+  gemini_failed: "تعذر تحليل Gemini",
+};
+
+function diagnosticSummary(categories: Record<string, number>): string {
+  return Object.entries(categories)
+    .map(([kind, count]) => `${diagnosticLabels[kind] ?? "خطأ تقني"}: ${count}`)
+    .join("، ");
+}
+
 function progressLabel(progress: RefreshProgressEvent | null) {
   if (!progress) return "";
   const count =
@@ -150,8 +166,8 @@ export default function UpdatePage({
       }));
       if (candidates.length === 0) {
         const d = result.diagnostics;
-        const imageKinds = Object.entries(d.image_failure_categories).map(([kind,count]) => `${kind}: ${count}`).join("، ");
-        const geminiKinds = Object.entries(d.gemini_failure_categories).map(([kind,count]) => `${kind}: ${count}`).join("، ");
+        const imageKinds = diagnosticSummary(d.image_failure_categories);
+        const geminiKinds = diagnosticSummary(d.gemini_failure_categories);
         setMessage(`لم يتم العثور على أسعار. تم فحص ${d.posts} منشورًا و${d.images_processed} صورة. أخطاء الصور: ${d.image_failures}${imageKinds ? ` (${imageKinds})` : ""}. محاولات Gemini: ${d.gemini_attempted}، الفاشلة: ${d.gemini_failed}${geminiKinds ? ` (${geminiKinds})` : ""}.`);
         setProgress(null);
         return;
