@@ -2,10 +2,12 @@ import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 
-const queryPriceHistory = vi.fn();
+const mocks = vi.hoisted(() => ({
+  queryPriceHistory: vi.fn(),
+}));
 
 vi.mock("../../src/history/historyExport", () => ({
-  queryPriceHistory,
+  queryPriceHistory: mocks.queryPriceHistory,
 }));
 
 import HistoryPage from "../../src/pages/HistoryPage";
@@ -33,7 +35,7 @@ const base = {
 
 describe("HistoryPage daily posts", () => {
   it("keeps the daily post compact by default and reveals source details on demand", async () => {
-    queryPriceHistory.mockResolvedValueOnce([
+    mocks.queryPriceHistory.mockResolvedValueOnce([
       base,
       {
         ...base,
