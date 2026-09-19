@@ -229,3 +229,80 @@ p {
     grid-template-columns: minmax(0, 1.5fr) minmax(110px, 0.75fr) minmax(110px, 0.75fr);
   }
 }
+
+
+.daily-price-post {
+  display: grid;
+  gap: 16px;
+}
+
+.daily-price-post-head,
+.daily-price-row,
+.daily-price-source {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.daily-price-post-head {
+  justify-content: space-between;
+  align-items: flex-start;
+}
+
+.daily-price-post-head h2 {
+  margin-bottom: 0;
+}
+
+.daily-price-count {
+  flex: 0 0 auto;
+  border-radius: 999px;
+  background: #f0e9ff;
+  color: #5b21b6;
+  padding: 6px 10px;
+  font-size: 0.85rem;
+  font-weight: 700;
+}
+
+.daily-price-list {
+  display: grid;
+  gap: 0;
+  border-top: 1px solid #eeeaf5;
+}
+
+.daily-price-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px 14px;
+  padding: 14px 0;
+  border-bottom: 1px solid #eeeaf5;
+}
+
+.daily-price-row:last-child {
+  border-bottom: 0;
+  padding-bottom: 0;
+}
+
+.daily-price-product {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.daily-price-value {
+  direction: ltr;
+  white-space: nowrap;
+  font-size: 1.05rem;
+  font-weight: 800;
+}
+
+.daily-price-value small {
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.daily-price-source {
+  grid-column: 1 / -1;
+  justify-content: space-between;
+  min-width: 0;
+  font-size: 0.86rem;
+}
