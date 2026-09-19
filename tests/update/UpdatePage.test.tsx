@@ -55,7 +55,6 @@ describe("manual update page", () => {
           <UpdatePage
             database={db}
             collectPosts={collectPosts}
-            createOcrEngine={() => ({ recognize: vi.fn() })}
             setReviewSession={setSession}
             navigate={navigate}
           />
